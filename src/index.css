@@ -1,162 +1,143 @@
+/* Dark theme variables */
 :root {
-    /* Цветовая палитра под скриншот */
-    --primary-color: #6366f1;
-    --primary-dark: #4f46e5;
-    --primary-light: #818cf8;
-    --secondary-color: #10b981;
-    --secondary-dark: #059669;
-    --accent-color: #8b5cf6;
-    --danger-color: #ef4444;
-
-    /* Нейтральные цвета - светлые для карточек */
-    --bg-primary: #6366f1;
-    --bg-secondary: #f8fafc;
-    --bg-tertiary: #f1f5f9;
-    --bg-card: #ffffff;
-    --bg-card-hover: #f8fafc;
-
-    /* Текстовые цвета */
-    --text-primary: #1e293b;
-    --text-secondary: #475569;
-    --text-muted: #64748b;
-    --text-accent: var(--primary-color);
-
-    /* Границы и тени */
-    --border-color: #e2e8f0;
-    --border-light: #cbd5e1;
-    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
-    --shadow-glow: 0 0 20px rgb(99 102 241 / 0.15);
-
-    /* Размеры и отступы */
-    --container-max-width: 1200px;
-    --container-padding: 1rem;
-    --border-radius: 0.75rem;
-    --border-radius-sm: 0.5rem;
-    --border-radius-lg: 1rem;
-
-    /* Анимации */
-    --transition-fast: 0.15s ease-in-out;
-    --transition-normal: 0.3s ease-in-out;
-    --transition-slow: 0.5s ease-in-out;
-
-    /* Типографика */
-    --font-size-xs: 0.75rem;
-    --font-size-sm: 0.875rem;
-    --font-size-base: 1rem;
-    --font-size-lg: 1.125rem;
-    --font-size-xl: 1.25rem;
-    --font-size-2xl: 1.5rem;
-    --font-size-3xl: 1.875rem;
-    --font-size-4xl: 2.25rem;
-
-    --font-weight-normal: 400;
-    --font-weight-medium: 500;
-    --font-weight-semibold: 600;
-    --font-weight-bold: 700;
-
-    --line-height-tight: 1.25;
-    --line-height-normal: 1.5;
-    --line-height-relaxed: 1.75;
+  --bg: #0b0f14;
+  --card: rgba(255, 255, 255, 0.06);
+  --card-hover: rgba(255, 255, 255, 0.1);
+  --text: #e6edf3;
+  --muted: #9aa7b2;
+  --accent: #6ea8fe;
+  --success: #2ecc71;
+  --danger: #ff6b6b;
+  --warning: #f7b955;
+  --shadow: 0 10px 30px rgba(0,0,0,0.35);
+  --radius: 14px;
+  --gap: 12px;
 }
 
-/* Сброс стилей */
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-}
-
-/* Базовые стили */
-html {
-    font-size: 16px;
-    scroll-behavior: smooth;
-}
-
+* { box-sizing: border-box; }
+html, body, #root { height: 100%; }
 body {
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto',
-    'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
-    font-size: var(--font-size-base);
-    font-weight: var(--font-weight-normal);
-    line-height: var(--line-height-normal);
-    color: var(--text-primary);
-    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
-    min-height: 100vh;
-    overflow-x: hidden;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
+  margin: 0;
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+  color: var(--text);
+  background: radial-gradient(80rem 80rem at 120% -10%, #1a2a6c22, transparent),
+              radial-gradient(60rem 60rem at -20% 120%, #b21f1f22, transparent),
+              linear-gradient(180deg, #0b0f14 0%, #0b0f14 100%);
 }
 
-/* Адаптивная типографика */
-@media (max-width: 768px) {
-    html {
-        font-size: 14px;
-    }
+.app {
+  min-width: 320px;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
-@media (max-width: 480px) {
-    html {
-        font-size: 13px;
-    }
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
 }
 
-/* Утилитарные классы */
-.container {
-    width: 100%;
-    max-width: var(--container-max-width);
-    margin: 0 auto;
-    padding: 0 var(--container-padding);
+.title {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
 }
 
-.text-center {
-    text-align: center;
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--card);
+  padding: 8px 12px;
+  border-radius: 9999px;
+  box-shadow: var(--shadow);
+}
+.status-dot {
+  width: 10px; height: 10px; border-radius: 9999px;
+  background: var(--danger);
+  box-shadow: 0 0 12px currentColor;
+}
+.status-dot.connected { background: var(--success); }
+.status-text { color: var(--muted); font-size: 12px; }
+
+.actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.btn {
+  background: linear-gradient(135deg, #1f3b7a, #6ea8fe);
+  color: white;
+  padding: 10px 14px;
+  border-radius: 10px;
+  box-shadow: var(--shadow);
+  font-weight: 600;
+}
+.btn:active { transform: translateY(1px); }
+
+.grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+@media (min-width: 560px) {
+  .grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+@media (min-width: 960px) {
+  .grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
 }
 
-.text-primary {
-    color: var(--text-primary);
+.card {
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  background: var(--card);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: var(--radius);
+  padding: 14px;
+  box-shadow: var(--shadow);
+  transition: background 0.2s ease;
+}
+.card:hover {
+  background: var(--card-hover);
 }
 
-.text-secondary {
-    color: var(--text-secondary);
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.card-badge {
+  background: rgba(110,168,254,0.15);
+  color: var(--accent);
+  padding: 4px 8px;
+  border-radius: 9999px;
 }
 
-.text-muted {
-    color: var(--text-muted);
+.products {
+  margin-top: 10px;
+  display: flex; flex-wrap: wrap; gap: 8px;
+}
+.chip {
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.08);
+  color: var(--text);
+  padding: 6px 10px;
+  border-radius: 9999px;
+  font-size: 12px;
 }
 
-.text-accent {
-    color: var(--text-accent);
-}
-
-/* Скроллбар */
-::-webkit-scrollbar {
-    width: 8px;
-}
-
-::-webkit-scrollbar-track {
-    background: var(--bg-secondary);
-}
-
-::-webkit-scrollbar-thumb {
-    background: var(--border-light);
-    border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-    background: var(--text-muted);
-}
-
-/* Фокус для доступности */
-*:focus {
-    outline: 2px solid var(--primary-color);
-    outline-offset: 2px;
-}
-
-button:focus,
-input:focus,
-select:focus,
-textarea:focus {
-    outline: 2px solid var(--primary-color);
-    outline-offset: 2px;
+.footer {
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: 12px;
+  display: flex; justify-content: space-between; align-items: center;
 }
