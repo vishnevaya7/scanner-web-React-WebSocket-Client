@@ -1,12 +1,19 @@
 export type PlatformId = number;
 export type ProductId = number;
 
-export type PlatformMap = Record<PlatformId, ProductId[]>;
+export interface ProductScan {
+    scanId: number;
+    product: ProductId
+}
+
+export type PlatformMap = Record<PlatformId, ProductScan[]>;
 
 export interface WSNewPairData {
   platform: PlatformId;
   product: ProductId;
-  timestamp: string;
+  // для совместимости: иногда может приходить scanId
+  scanId?: number;
+  timestamp?: string;
 }
 
 export interface WSChangePlatformData {

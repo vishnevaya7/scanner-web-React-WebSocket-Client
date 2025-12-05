@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { WSMessage } from '../types'
+import { auth } from '../services/auth'
 
 export type UseWebSocketOptions = {
   onMessage?: (msg: WSMessage) => void
@@ -18,7 +19,9 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
 
   const url = useMemo(() => {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-    return `${protocol}//${window.location.host}/ws`
+    const token = auth.getToken()
+    const q = token ? `?token=${encodeURIComponent(token)}` : ''
+    return `${protocol}//${window.location.host}/ws${q}`
   }, [])
 
   const cleanup = useCallback(() => {
@@ -33,6 +36,11 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
   }, [])
 
   const connect = useCallback(() => {
+    // Не подключаемся без токена
+    if (!auth.getToken()) {
+      setIsConnected(false)
+      return
+    }
     cleanup()
     closedByUserRef.current = false
     const ws = new WebSocket(url)
