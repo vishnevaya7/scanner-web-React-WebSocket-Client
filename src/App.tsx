@@ -1,60 +1,108 @@
-import { BrowserRouter, Routes, Route, useLocation, Navigate } from 'react-router-dom'
-import Sidebar from './components/Sidebar'
-import Dashboard from './pages/Dashboard'
-import History from './pages/History'
-import Devices from './pages/Devices'
-import { useEffect, useState } from 'react'
-import Login from './pages/Login'
-import { auth } from './services/auth'
+// src/App.tsx
+import React, { useCallback } from 'react';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { useWebSocket } from './hooks/useWebSocket';
+import { auth } from './services/auth';
 
-function Layout() {
-  const [sidebarOpen, setSidebarOpen] = useState(false)
-  const location = useLocation()
+function Login() {
+    const { setIsAuthenticated } = useAuth();
+    const [loginInput, setLoginInput] = React.useState('');
+    const [error, setError] = React.useState('');
+    const [isLoading, setIsLoading] = React.useState(false);
 
-  useEffect(() => {
-    // закрывать сайдбар при смене маршрута (полезно на мобильных)
-    setSidebarOpen(false)
-  }, [location.pathname])
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setError('');
+        setIsLoading(true);
+        const result = await auth.login(loginInput);
+        setIsLoading(false);
+        if (!result) {
+            setError('Ошибка аутентификации. Проверьте логин и консоль для деталей.');
+            return;
+        }
+        setIsAuthenticated(true);
+    };
 
-  return (
-    <div className={`app layout ${sidebarOpen ? 'sidebar-open' : ''}`}>
-      {/* Кнопка-бургер для мобильных */}
-      <button
-        className="menu-button"
-        aria-label="Меню"
-        onClick={() => setSidebarOpen((v) => !v)}
-      >
-        ≡
-      </button>
-      <Sidebar />
-      {/* Оверлей для клика вне меню на мобильных */}
-      {sidebarOpen && <div className="backdrop" onClick={() => setSidebarOpen(false)} />}
-      <main className="content">
-        <Routes>
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/history" element={<History />} />
-          <Route path="/devices" element={<Devices />} />
-        </Routes>
-      </main>
-    </div>
-  )
+    return (
+        <div className="min-h-screen flex items-center justify-center bg-gray-100">
+            <form onSubmit={handleSubmit} className="bg-white p-8 rounded shadow-md w-96">
+                <h2 className="text-2xl font-bold mb-4">Вход</h2>
+                <input
+                    type="text"
+                    placeholder="Логин"
+                    value={loginInput}
+                    onChange={(e) => setLoginInput(e.target.value)}
+                    className="w-full p-2 border rounded mb-4"
+                    required
+                    disabled={isLoading}
+                />
+                {error && <p className="text-red-500 mb-4">{error}</p>}
+                <button
+                    type="submit"
+                    disabled={isLoading}
+                    className="w-full bg-blue-500 text-white p-2 rounded disabled:opacity-50"
+                >
+                    {isLoading ? 'Вход...' : 'Войти'}
+                </button>
+            </form>
+        </div>
+    );
 }
 
+function ProtectedApp() {
+    const { isAuthenticated, login } = useAuth();
+    // Memoize onMessage — стабильная функция, deps не меняются
+    const onMessage = useCallback((data: unknown) => {
+        console.log('App received:', data);
+    }, []); // [] — не зависит от рендера
+
+    const { isConnected, lastMessage, sendJson } = useWebSocket({
+        autoReconnect: true,
+        onMessage, // Теперь стабильная
+    });
+
+    const handleLogout = () => {
+        auth.logout();
+        window.location.reload();
+    };
+
+    if (!isAuthenticated || !auth.getToken()) {
+        return <Login />;
+    }
+
+    return (
+        <div className="min-h-screen bg-gray-50">
+            <button onClick={handleLogout} className="fixed top-4 right-4 bg-red-500 text-white p-2 rounded">
+                Выйти ({login || 'Неизвестно'})
+            </button>
+            <div className="fixed top-4 left-4 p-2 bg-green-500 text-white rounded">
+                {isConnected ? 'Подключено' : 'Отключено'}
+            </div>
+            <div className="p-4">
+                <h1>Основной контент (защищённый)</h1>
+                <p>Логин: {login}</p>
+                <p>Последнее сообщение: {JSON.stringify(lastMessage)}</p>
+                <button onClick={() => sendJson({ event: 'test', data: 'hello' })} className="bg-blue-500 text-white p-2 rounded">
+                    Отправить тест
+                </button>
+            </div>
+        </div>
+    );
+}
 
 export default function App() {
-  function ProtectedApp() {
-    const token = auth.getToken()
-    if (!token) return <Navigate to="/login" replace />
-    return <Layout />
-  }
-
-  return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/login" element={<Login />} />
-        <Route path="/*" element={<ProtectedApp />} />
-      </Routes>
-    </BrowserRouter>
-  )
+    return (
+        <AuthProvider>
+            <AppContent />
+        </AuthProvider>
+    );
 }
 
+function AppContent() {
+    const { isAuthenticated } = useAuth();
+    return (
+        <>
+            {isAuthenticated ? <ProtectedApp /> : <Login />}
+        </>
+    );
+}
