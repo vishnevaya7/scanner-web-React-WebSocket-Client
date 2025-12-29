@@ -1,62 +1,66 @@
-import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react';
-import type { HistoryResponse } from "../types";
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import type { HistoryResponse, HistoryItem } from "../types";
 import { api } from "../services/api";
-import './styles/HistoryPage.css'; // Импорт локальных стилей
+import './styles/HistoryPage.css';
 
-type SortField = 'id' | 'login' | 'platform' | 'product' | 'timestamp' | 'legacy_synced' | 'legacy_integration_error';
+type SortField = 'id' | 'login' | 'platform' | 'product' | 'scan_date' | 'legacy_synced' | 'is_overwrite';
 
 interface Filters {
-    date_from?: string;
-    date_to?: string;
-    platform?: number;
-    product?: number;
-    login?: string;
-    legacy_synced?: number;
-    is_overwrite?: boolean;
+    date_from: string;
+    date_to: string;
+    login: string;
+    product: string | number;
+    platform: string | number;
+    legacy_synced: string | number;
+    is_overwrite: string;
     sort: SortField;
     order: 'asc' | 'desc';
     page: number;
     size: number;
+    id: string | number;
 }
 
 const HistoryPage: React.FC = () => {
+    const todayStr = useMemo(() => new Date().toISOString().split('T')[0], []);
+
     const [history, setHistory] = useState<HistoryResponse>({
         items: [], total: 0, page: 1, size: 100, pages: 0
     });
     const [loading, setLoading] = useState(true);
-    const [filters, setFilters] = useState<Filters>({
-        page: 1, size: 100, date_from: '', date_to: '', login: '',
-        platform: undefined, product: undefined, legacy_synced: undefined,
-        is_overwrite: undefined, sort: 'timestamp', order: 'desc'
-    });
     const [showFilters, setShowFilters] = useState(false);
 
-    const filtersRef = useRef<HTMLDivElement>(null);
-    const buttonRef = useRef<HTMLButtonElement>(null);
-    const today = useMemo(() => new Date().toISOString().split('T')[0], []);
+    const [filters, setFilters] = useState<Filters>({
+        page: 1,
+        size: 100,
+        date_from: todayStr,
+        date_to: todayStr,
+        login: '',
+        product: '',
+        platform: '',
+        legacy_synced: '',
+        is_overwrite: '',
+        sort: 'scan_date',
+        order: 'desc',
+        id: ''
+    });
 
-    // Закрытие фильтров при клике вне области
-    useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            const target = event.target as Node;
-            if (filtersRef.current && !filtersRef.current.contains(target) &&
-                buttonRef.current && !buttonRef.current.contains(target)) {
-                setShowFilters(false);
-            }
-        };
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, []);
-
-    // Установка даты по умолчанию
-    useEffect(() => {
-        setFilters(prev => ({ ...prev, date_from: today, date_to: today }));
-    }, [today]);
-
-    const loadHistory = useCallback(async (currentFilters: Filters) => {
+    const loadHistory = useCallback(async (f: Filters) => {
         setLoading(true);
         try {
-            const data = await api.getHistory(currentFilters);
+            const apiParams: any = {
+                page: f.page,
+                size: f.size,
+                id: f.id !== '' ? f.id : undefined,
+                date_from: f.id === '' ? f.date_from : undefined,
+                date_to: f.id === '' ? f.date_to : undefined,
+                login: f.login !== '' ? f.login : undefined,
+                product: f.product !== '' ? f.product : undefined,
+                platform: f.platform !== '' ? f.platform : undefined,
+                legacy_synced: f.legacy_synced === '' ? undefined : Number(f.legacy_synced),
+                is_overwrite: f.is_overwrite === 'true' ? true : f.is_overwrite === 'false' ? false : undefined,
+                sort: `${f.sort},${f.order}`
+            };
+            const data = await api.getHistory(apiParams);
             setHistory(data);
         } catch (error) {
             console.error('Ошибка загрузки истории:', error);
@@ -69,117 +73,108 @@ const HistoryPage: React.FC = () => {
         loadHistory(filters);
     }, [filters, loadHistory]);
 
-    const handleSort = (field: SortField) => {
-        setFilters(prev => ({
-            ...prev,
-            sort: field,
-            order: prev.sort === field && prev.order === 'asc' ? 'desc' : 'asc',
-            page: 1
-        }));
-    };
-
     const updateFilter = (key: keyof Filters, value: any) => {
         setFilters(prev => ({
             ...prev,
-            [key]: value === '' ? undefined : value,
+            [key]: value === null ? '' : value,
             page: 1
         }));
     };
 
-    const resetFilters = () => {
-        setFilters({
-            date_from: today, date_to: today, page: 1, size: 100,
-            sort: 'timestamp', order: 'desc', login: '',
-            platform: undefined, product: undefined,
-            legacy_synced: undefined, is_overwrite: undefined
+    const handleSort = (field: SortField) => {
+        setFilters(prev => {
+            let nextOrder: 'asc' | 'desc' | 'default' = 'desc';
+            if (prev.sort === field) {
+                if (prev.order === 'desc') nextOrder = 'asc';
+                else if (prev.order === 'asc') nextOrder = 'default';
+            }
+            if (nextOrder === 'default') {
+                return { ...prev, sort: 'scan_date', order: 'desc', page: 1 };
+            }
+            return { ...prev, sort: field, order: nextOrder as 'asc' | 'desc', page: 1 };
         });
     };
 
-    const getStatusBadge = (status: number | null) => {
-        const badges = {
-            1: <span className="status-badge status-success">✅ Синхр.</span>,
-            0: <span className="status-badge status-warning">⏳ Ожидает</span>,
-            [-1]: <span className="status-badge status-error">❌ Ошибка</span>
-        };
-        return badges[status as keyof typeof badges] || <span className="status-badge">—</span>;
+    const renderSortIcon = (field: SortField) => {
+        const isActive = filters.sort === field;
+        if (!isActive) return <span className="sort-icon inactive">↕</span>;
+        return <span className="sort-icon active">{filters.order === 'desc' ? '↓' : '↑'}</span>;
     };
 
-    const columns: { key: SortField; label: string }[] = [
-        { key: 'id', label: 'ID' },
-        { key: 'login', label: 'Логин' },
-        { key: 'platform', label: 'Платформа' },
-        { key: 'product', label: 'Продукт' },
-        { key: 'legacy_synced', label: 'Статус' },
-        { key: 'timestamp', label: 'Время' }
-    ];
+    const getStatusBadge = (status: any) => {
+        const s = Number(status);
+        if (s === 1) return <span className="status-badge status-success">✅ Успешно</span>;
+        if (s === 0) return <span className="status-badge status-warning">⏳ В очереди</span>;
+        if (s === -1) return <span className="status-badge status-error">❌ Ошибка</span>;
+        return <span className="status-badge">—</span>;
+    };
 
     return (
         <div className="history-container">
             <div className="history-header">
                 <h1 className="history-title">История сканирований</h1>
-                <div className="history-stats">
-                    Всего: <strong>{history.total.toLocaleString()}</strong>
-                </div>
+                <div className="history-stats">Найдено записей: <strong>{history.total}</strong></div>
             </div>
 
             <div className="history-controls">
                 <button
-                    ref={buttonRef}
-                    className="history-btn"
+                    className={`history-btn ${showFilters ? 'active' : ''}`}
                     onClick={() => setShowFilters(!showFilters)}
                 >
-                    {showFilters ? 'Скрыть фильтры' : '🔧 Фильтры'}
+                    {showFilters ? '✕ Скрыть панель' : '🔧 Настроить фильтры'}
                 </button>
-                <div className="history-size-selector">
-                    {[50, 100, 200].map(s => (
-                        <button
-                            key={s}
-                            className={`history-btn ${filters.size === s ? 'active' : ''}`}
-                            onClick={() => updateFilter('size', s)}
-                        >
-                            {s}
-                        </button>
-                    ))}
+
+                <div className="date-range-combined">
+                    <input type="date" value={filters.date_from} onChange={e => updateFilter('date_from', e.target.value)} />
+                    <span className="date-separator">→</span>
+                    <input type="date" value={filters.date_to} onChange={e => updateFilter('date_to', e.target.value)} />
                 </div>
+
+                {history.pages > 1 && (
+                    <div className="pagination-mini">
+                        <button disabled={filters.page === 1} onClick={() => updateFilter('page', filters.page - 1)}>←</button>
+                        <span>{filters.page} / {history.pages}</span>
+                        <button disabled={filters.page === history.pages} onClick={() => updateFilter('page', filters.page + 1)}>→</button>
+                    </div>
+                )}
             </div>
 
             {showFilters && (
-                <div ref={filtersRef} className="filters-panel">
+                <div className="filters-panel animated-fade-in">
                     <div className="filters-grid">
                         <div className="filter-group">
-                            <label>От</label>
-                            <input type="date" className="history-input" value={filters.date_from} onChange={e => updateFilter('date_from', e.target.value)} />
+                            <label>ID записи</label>
+                            <input type="text" className="history-input" placeholder="#403" value={filters.id} onChange={e => updateFilter('id', e.target.value)} />
                         </div>
                         <div className="filter-group">
-                            <label>До</label>
-                            <input type="date" className="history-input" value={filters.date_to} onChange={e => updateFilter('date_to', e.target.value)} />
+                            <label>Пользователь</label>
+                            <input type="text" className="history-input" placeholder="Логин..." value={filters.login} onChange={e => updateFilter('login', e.target.value)} />
                         </div>
                         <div className="filter-group">
-                            <label>Логин</label>
-                            <input type="text" className="history-input" placeholder="user123" value={filters.login} onChange={e => updateFilter('login', e.target.value)} />
+                            <label>Тип записи</label>
+                            <select className="history-select" value={filters.is_overwrite} onChange={e => updateFilter('is_overwrite', e.target.value)}>
+                                <option value="">🆕 Все типы</option>
+                                <option value="false">🆕 Только новые</option>
+                                <option value="true">🔄 Перемещения</option>
+                            </select>
                         </div>
                         <div className="filter-group">
-                            <label>Платформа ID</label>
-                            <input type="number" className="history-input" placeholder="ID" value={filters.platform || ''} onChange={e => updateFilter('platform', Number(e.target.value) || undefined)} />
-                        </div>
-                        <div className="filter-group">
-                            <label>Статус</label>
-                            <select className="history-select" value={filters.legacy_synced ?? ''} onChange={e => updateFilter('legacy_synced', e.target.value === '' ? undefined : Number(e.target.value))}>
-                                <option value="">Все</option>
-                                <option value="1">✅ Синхронизировано</option>
-                                <option value="0">⏳ Ожидает</option>
+                            <label>Статус Legacy</label>
+                            <select className="history-select" value={filters.legacy_synced} onChange={e => updateFilter('legacy_synced', e.target.value)}>
+                                <option value="">Любой статус</option>
+                                <option value="1">✅ Успешно</option>
+                                <option value="0">⏳ Ожидание</option>
                                 <option value="-1">❌ Ошибка</option>
                             </select>
                         </div>
-                        <div className="filter-group checkbox-group">
-                            <label className="checkbox-label">
-                                <input type="checkbox" checked={filters.is_overwrite || false} onChange={e => updateFilter('is_overwrite', e.target.checked)} />
-                                <span>Перезапись</span>
-                            </label>
+                        <div className="filter-group">
+                            <label>ID Продукта</label>
+                            <input type="text" className="history-input" placeholder="Штрихкод" value={filters.product} onChange={e => updateFilter('product', e.target.value)} />
                         </div>
-                    </div>
-                    <div className="filter-actions">
-                        <button className="history-btn" onClick={resetFilters}>🔄 Сбросить все фильтры</button>
+                        <div className="filter-group">
+                            <label>ID Платформы</label>
+                            <input type="text" className="history-input" placeholder="Номер..." value={filters.platform} onChange={e => updateFilter('platform', e.target.value)} />
+                        </div>
                     </div>
                 </div>
             )}
@@ -188,71 +183,34 @@ const HistoryPage: React.FC = () => {
                 <table className="history-table">
                     <thead>
                     <tr>
-                        {columns.map(col => (
-                            <th key={col.key} className="history-th sortable" onClick={() => handleSort(col.key)}>
-                                <div className="th-content">
-                                    {col.label}
-                                    <span className="sort-icon">
-                                            {filters.sort === col.key ? (filters.order === 'asc' ? '🔼' : '🔽') : '↕️'}
-                                        </span>
-                                </div>
-                            </th>
-                        ))}
+                        <th onClick={() => handleSort('id')} className="history-th sortable">ID {renderSortIcon('id')}</th>
+                        <th onClick={() => handleSort('login')} className="history-th sortable">Логин {renderSortIcon('login')}</th>
+                        <th onClick={() => handleSort('product')} className="history-th sortable">Продукт {renderSortIcon('product')}</th>
+                        <th onClick={() => handleSort('platform')} className="history-th sortable">Платформа {renderSortIcon('platform')}</th>
+                        <th onClick={() => handleSort('legacy_synced')} className="history-th sortable">Статус {renderSortIcon('legacy_synced')}</th>
+                        <th onClick={() => handleSort('scan_date')} className="history-th sortable">Время {renderSortIcon('scan_date')}</th>
                     </tr>
                     </thead>
                     <tbody>
                     {loading ? (
-                        <tr>
-                            <td colSpan={6} className="loading-state">
-                                <div className="spinner"></div>
-                                <span>Загрузка данных...</span>
-                            </td>
-                        </tr>
+                        <tr><td colSpan={6} className="loading-state">Загрузка данных...</td></tr>
                     ) : history.items.length === 0 ? (
-                        <tr>
-                            <td colSpan={6} className="empty-state">Нет записей по выбранным фильтрам</td>
-                        </tr>
+                        <tr><td colSpan={6} className="empty-state">Записей не найдено</td></tr>
                     ) : (
-                        history.items.map(item => (
-                            <tr key={item.id}>
+                        history.items.map((item: HistoryItem) => (
+                            <tr key={item.id} className={item.is_overwrite ? 'row-overwrite' : ''}>
                                 <td className="history-td font-mono">#{item.id}</td>
-                                <td className="history-td font-semibold">{item.login}</td>
-                                <td className="history-td">
-                                    <span className="platform-badge">{item.platform}</span>
-                                </td>
-                                <td className="history-td font-mono">{item.product ?? '—'}</td>
+                                <td className="history-td">{item.login}</td>
+                                <td className="history-td font-mono">{item.product}</td>
+                                <td className="history-td"><span className="platform-badge">{item.platform}</span></td>
                                 <td className="history-td">{getStatusBadge(item.legacy_synced)}</td>
-                                <td className="history-td time-cell">
-                                    {new Date(item.timestamp).toLocaleString('ru-RU')}
-                                </td>
+                                <td className="history-td time-cell">{new Date(item.timestamp).toLocaleString('ru-RU')}</td>
                             </tr>
                         ))
                     )}
                     </tbody>
                 </table>
             </div>
-
-            {history.pages > 1 && (
-                <div className="pagination">
-                    <button
-                        className="pagination-btn"
-                        disabled={filters.page === 1}
-                        onClick={() => updateFilter('page', filters.page - 1)}
-                    >
-                        ← Назад
-                    </button>
-                    <span className="pagination-info">
-                        Стр. {filters.page} из {history.pages}
-                    </span>
-                    <button
-                        className="pagination-btn"
-                        disabled={filters.page === history.pages}
-                        onClick={() => updateFilter('page', filters.page + 1)}
-                    >
-                        Вперед →
-                    </button>
-                </div>
-            )}
         </div>
     );
 };

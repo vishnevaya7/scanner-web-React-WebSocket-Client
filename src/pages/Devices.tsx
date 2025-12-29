@@ -1,21 +1,28 @@
 import { useCallback, useEffect, useState } from 'react';
 import Header from '../components/Header';
 import { api } from '../services/api';
-import './styles/Devices.css'; // Импорт локальных стилей
+import './styles/Devices.css';
+
+interface Scanner {
+    login: string;
+    input_count: number;
+    output_count: number;
+    current_platform: number;
+    input_ids: number[];
+    output_ids: number[];
+}
 
 export default function Devices() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const [total, setTotal] = useState(0);
-    const [items, setItems] = useState<any[]>([]);
+    const [items, setItems] = useState<Scanner[]>([]);
 
     const load = useCallback(async () => {
         try {
             setLoading(true);
             setError(null);
-            const res = await api.getScanners();
-            setTotal(res.total_scanners);
-            setItems(res.scanners);
+            const data = await api.getScanners();
+            setItems(Array.isArray(data) ? data : []);
         } catch (e: any) {
             setError(e?.message || 'Ошибка загрузки');
         } finally {
@@ -23,9 +30,7 @@ export default function Devices() {
         }
     }, []);
 
-    useEffect(() => {
-        void load();
-    }, [load]);
+    useEffect(() => { void load(); }, [load]);
 
     return (
         <div className="devices-page">
@@ -33,32 +38,49 @@ export default function Devices() {
 
             <div className="card">
                 <div className="card-header">
-                    <div className="card-title">Всего устройств</div>
-                    <div className="card-badge">{total}</div>
+                    <div className="card-title">Активные сессии</div>
+                    <div className="card-badge">{items.length}</div>
                 </div>
                 <div className="device-card-footer">
-                    <button className="btn" onClick={load} disabled={loading}>Обновить</button>
-                    {loading && <span className="device-loading-inline">Загрузка...</span>}
+                    <button className="btn" onClick={load} disabled={loading}>
+                        {loading ? 'Обновление...' : 'Обновить список'}
+                    </button>
                     {error && <span className="device-error-text">{error}</span>}
                 </div>
             </div>
 
             <div className="devices-grid">
-                {items.length === 0 && !loading && (
-                    <div className="card">Нет данных об устройствах</div>
-                )}
                 {items.map((it, idx) => (
-                    <div key={idx} className="card">
+                    <div key={it.login + idx} className="card">
                         <div className="card-header">
-                            <div className="card-title">{it.name || it.id || `Device #${idx + 1}`}</div>
-                            {it.status && <div className="card-badge">{it.status}</div>}
+                            <div className="card-title">👤 {it.login}</div>
+                            <div className="card-badge">Текущая платформа: {it.current_platform}</div>
                         </div>
-                        <div className="device-card-footer">
-                            <span className="device-status-info">{it.ip || it.address || '—'}</span>
-                            {it.last_seen && (
-                                <span className="device-status-info">
-                                    {new Date(it.last_seen).toLocaleString()}
-                                </span>
+
+                        <div className="device-info-body">
+                            <div className="info-row">
+                                <span>Входных каналов: <strong>{it.input_count}</strong></span>
+                                <span>Выходных каналов: <strong>{it.output_count}</strong></span>
+                            </div>
+
+                            <div className="id-container">
+                                <span className="id-label">Output IDs:</span>
+                                <div className="id-list">
+                                    {it.output_ids.map(id => (
+                                        <div key={id} className="device-status-info id-tag">{id}</div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {it.input_ids.length > 0 && (
+                                <div className="id-container">
+                                    <span className="id-label">Input IDs:</span>
+                                    <div className="id-list">
+                                        {it.input_ids.map(id => (
+                                            <div key={id} className="device-status-info id-tag">{id}</div>
+                                        ))}
+                                    </div>
+                                </div>
                             )}
                         </div>
                     </div>

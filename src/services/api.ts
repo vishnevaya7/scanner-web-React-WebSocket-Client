@@ -1,12 +1,21 @@
 import type { PlatformMap, ScannerInfoResponse, HistoryResponse } from '../types';
 import { auth } from './auth';
 
+// Определяем базовый URL бэкенда.
+// Если вы используете прокси в Vite, оставьте пустую строку.
+// Если нет — укажите адрес бэкенда явно.
+const BASE_URL = import.meta.env.VITE_API_URL || 'http://192.168.0.103:8000';
+
 /**
  * Универсальный метод запроса.
  */
-async function request<T>(url: string, init?: RequestInit): Promise<T> {
+async function request<T>(path: string, init?: RequestInit): Promise<T> {
     const token = auth.getToken();
-    const res = await fetch(url, {
+
+    // Склеиваем базовый URL и путь. Убираем двойные слэши если они возникнут.
+    const fullUrl = `${BASE_URL}${path.startsWith('/') ? path : '/' + path}`;
+
+    const res = await fetch(fullUrl, {
         ...init,
         headers: {
             'Content-Type': 'application/json',
@@ -16,6 +25,10 @@ async function request<T>(url: string, init?: RequestInit): Promise<T> {
     });
 
     if (!res.ok) {
+        // Если пришла ошибка 404, выведем в консоль полный URL для отладки
+        if (res.status === 404) {
+            console.error(`Ошибка 404: Ресурс не найден по адресу ${fullUrl}`);
+        }
         const errorBody = await res.json().catch(() => ({}));
         throw new Error(errorBody.detail || `${res.status} ${res.statusText}`);
     }
@@ -44,6 +57,26 @@ export const api = {
     getScanners() {
         return request<ScannerInfoResponse>('/api/scanners');
     },
+
+    getGraphics(params?: {
+        date_from?: string;
+        date_to?: string;
+        platform?: number;
+    }) {
+        const q = new URLSearchParams();
+        if (params) {
+            Object.entries(params).forEach(([k, v]) => {
+                if (v !== undefined && v !== null && v !== '') q.append(k, String(v));
+            });
+        }
+        return request<{
+            by_date: { date: string, count: number }[],
+            by_platform: { platform: number, count: number }[],
+            by_user: { login: string, count: number }[],
+            summary: { total: number, overwrites: number, errors: number }
+        }>(`/api/graphics?${q.toString()}`);
+    },
+
     getHistory(params?: {
         date_from?: string;
         date_to?: string;
@@ -54,31 +87,32 @@ export const api = {
         is_overwrite?: boolean;
         page?: number;
         size?: number;
-        sort?: string;  // Теперь передаем сюда 'id', 'login' и т.д.
-        order?: 'asc' | 'desc'; // Добавляем направление
+        sort?: string;
+        order?: 'asc' | 'desc';
     }): Promise<HistoryResponse> {
         const q = new URLSearchParams();
 
         if (params) {
-            // 1. Обрабатываем сортировку отдельно, если есть оба параметра
             const { sort, order, ...rest } = params;
 
-            if (sort && order) {
-                q.append('sort', `${sort},${order}`); // Результат: sort=timestamp,desc
-            } else if (sort) {
-                q.append('sort', sort); // На случай, если порядок не передан
+            // Формируем строку сортировки: sort=timestamp,desc
+            if (sort) {
+                const sortValue = order ? `${sort},${order}` : sort;
+                q.append('sort', sortValue);
             }
 
-            // 2. Добавляем остальные параметры
+            // Добавляем все остальные параметры
             Object.entries(rest).forEach(([k, v]) => {
                 if (v !== undefined && v !== null && v !== '') {
+                    // Для boolean параметров (is_overwrite) передаем строку
                     q.append(k, String(v));
                 }
             });
         }
 
         const queryString = q.toString();
-        const url = `/api/history${queryString ? `?${queryString}` : ''}`;
-        return request<HistoryResponse>(url);
+        const path = `/api/history${queryString ? `?${queryString}` : ''}`;
+
+        return request<HistoryResponse>(path);
     },
 };

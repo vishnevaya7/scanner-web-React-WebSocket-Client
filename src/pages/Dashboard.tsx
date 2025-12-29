@@ -5,99 +5,173 @@ import { useWS } from '../context/WSContext';
 import type { PlatformId, ProductScan } from '../types';
 import './styles/Dashboard.css';
 
+interface MoveAlert {
+    id: number;
+    product: number;
+    from: number;
+    to: number;
+}
+
 export default function Dashboard() {
     const { messages, historyToday, isLoadingHistory } = useWS();
     const [selectedPlatform, setSelectedPlatform] = useState<PlatformId | null>(null);
     const [products, setProducts] = useState<ProductScan[]>([]);
+    const [moveAlerts, setMoveAlerts] = useState<MoveAlert[]>([]);
+
     const platformRef = useRef<PlatformId | null>(null);
 
     useEffect(() => {
         platformRef.current = selectedPlatform;
     }, [selectedPlatform]);
 
-    // 1. СИНХРОНИЗАЦИЯ С API (История — без анимации)
-    useEffect(() => {
-        if (historyToday.length > 0) {
-            const platformFromHistory = historyToday[0].platform as PlatformId;
-            setSelectedPlatform(platformFromHistory);
+    const removeAlert = (id: number) => {
+        setMoveAlerts(prev => prev.filter(a => a.id !== id));
+    };
 
-            const mapped = historyToday.map(item => ({
+    // 1. СИНХРОНИЗАЦИЯ С ИСТОРИЕЙ
+    useEffect(() => {
+        if (historyToday) {
+            const activeItems = historyToday.filter(item => !item.is_overwrite);
+            const mapped: ProductScan[] = activeItems.map(item => ({
                 product: item.product,
                 scanId: item.id,
-                timestamp: 0 // Ставим 0, чтобы чипы знали, что это история
+                timestamp: 0,
+                isOverwrite: false
             }));
-
-            setProducts(prev => {
-                const historyIds = new Set(mapped.map(p => p.scanId));
-                const wsOnly = prev.filter(p => !historyIds.has(p.scanId));
-                return [...wsOnly, ...mapped];
-            });
+            setProducts(mapped);
+            if (historyToday.length > 0) {
+                const firstPlatform = historyToday[0].platform as PlatformId;
+                if (firstPlatform) setSelectedPlatform(firstPlatform);
+            }
         }
     }, [historyToday]);
 
-    // 2. ОБРАБОТКА WS СОБЫТИЙ (Мгновенная реакция — с анимацией)
+    // 2. ОБРАБОТКА WS СОБЫТИЙ
     useEffect(() => {
         if (messages.length === 0) return;
+
         const latestMsg = messages[messages.length - 1] as any;
-        const event = latestMsg.event || latestMsg.type;
+        const type = latestMsg.type || latestMsg.event;
         const payload = latestMsg.data || latestMsg;
 
-        // А) Смена платформы
-        if (event === 'change_platform') {
+        console.log(`📥 [WS] Тип: ${type}`, payload);
+
+        // А) Регистрация или смена платформы
+        if (type === 'change_platform' || type === 'register_success') {
             const newPid = payload.platform || payload.current_platform;
-            if (newPid) setSelectedPlatform(newPid as PlatformId);
-
-            let rawItems = payload.items || payload.products;
-            if (!rawItems && payload.pairs && newPid) {
-                rawItems = payload.pairs[newPid] || payload.pairs[String(newPid)];
-            }
-
-            if (rawItems && Array.isArray(rawItems)) {
-                setProducts(rawItems.map((p: any) => ({
-                    product: p.product || p.id,
-                    scanId: p.scan_id || p.scanId || p.id,
-                    timestamp: 0 // Смена платформы обычно загружает пачку данных, не подсвечиваем всё
-                })));
+            if (newPid) {
+                console.log(`📍 Dashboard: Установлена Платформа №${newPid}`);
+                setSelectedPlatform(newPid as PlatformId);
             }
             return;
         }
 
-        // Б) Новый пик (Самый важный момент для анимации)
-        if (event === 'new_product' || event === 'new_pair' || payload.product) {
-            const msgPlatform = payload.platform || payload.current_platform;
-            const currentP = platformRef.current;
+        // Б) Новый пик или дубль (new_pair)
+        if (type === 'new_pair') {
+            const msgPlatform = Number(payload.platform);
+            const currentP = Number(platformRef.current);
 
-            if (Number(msgPlatform) === Number(currentP) || currentP === null) {
+            if (msgPlatform === currentP) {
                 const rawProduct = payload.product;
-                const productValue = typeof rawProduct === 'object' ? rawProduct.id : rawProduct;
-                const scanId = payload.scan_id || payload.scanId || payload.id || Date.now();
+                const productValue = typeof rawProduct === 'object' && rawProduct !== null
+                    ? rawProduct.id
+                    : rawProduct;
+                const isOverwrite = !!payload.is_overwrite;
 
                 if (productValue) {
+                    // ЕСЛИ ПЕРЕЗАПИСЬ — показываем уведомление прямо здесь
+                    if (isOverwrite) {
+                        const newAlert: MoveAlert = {
+                            id: Date.now() + Math.random(),
+                            product: productValue,
+                            from: 0, // Указываем 0, так как в new_pair нет данных о прошлой платформе
+                            to: msgPlatform
+                        };
+                        setMoveAlerts(prev => [newAlert, ...prev]);
+                        setTimeout(() => removeAlert(newAlert.id), 5000);
+                    }
+
                     setProducts(prev => {
-                        if (prev.some(p => p.scanId === scanId)) return prev;
-                        // Добавляем текущее время для активации анимации в чипе
+                        const filtered = isOverwrite ? prev.filter(p => p.product !== productValue) : prev;
                         return [{
                             product: productValue,
-                            scanId,
-                            timestamp: Date.now()
-                        }, ...prev];
+                            scanId: payload.scanId || payload.id,
+                            timestamp: Date.now(),
+                            isOverwrite: isOverwrite
+                        }, ...filtered];
                     });
                 }
             }
         }
-    }, [messages]);
+
+        // В) ПЕРЕМЕЩЕНИЕ (product_moved)
+        if (type === 'product_moved') {
+            const fromP = Number(payload.from_platform);
+            const toP = Number(payload.to_platform);
+            const productId = Number(payload.product);
+            const currentP = Number(platformRef.current);
+
+            console.log(`🔄 Перемещение: Прод ${productId} | Из ${fromP} -> В ${toP} | Я на ${currentP}`);
+
+            // 1. Анимация удаления
+            if (fromP === currentP) {
+                setProducts(prev => prev.map(p =>
+                    p.product === productId ? { ...p, isMovingOut: true } : p
+                ));
+                setTimeout(() => {
+                    setProducts(prev => prev.filter(p => p.product !== productId));
+                }, 2000);
+            }
+
+            // 2. Уведомление
+            if (fromP === currentP || toP === currentP) {
+                const newAlert: MoveAlert = {
+                    id: Date.now() + Math.random(),
+                    product: productId,
+                    from: fromP,
+                    to: toP
+                };
+                setMoveAlerts(prev => [newAlert, ...prev]);
+                setTimeout(() => removeAlert(newAlert.id), 5000);
+            }
+        }
+    }, [messages.length]);
 
     return (
         <div className="dashboard-page">
             <Header title="Мониторинг" />
-            <div className="dashboard-status-info">
-                {isLoadingHistory && <span className="sync-loader">🔄 Загрузка истории... </span>}
-                {selectedPlatform ? (
-                    <span className="platform-active-tag">Платформа №{selectedPlatform} — Активна</span>
-                ) : (
-                    <span>Ожидание сканера...</span>
-                )}
+
+            {/* КОНТЕЙНЕР УВЕДОМЛЕНИЙ */}
+            <div className="move-alerts-container">
+                {moveAlerts.map(alert => (
+                    <div key={alert.id} className="move-alert-card">
+                        <span className="alert-icon">🔄</span>
+                        <div className="alert-content">
+                            <span className="alert-title">ПЕРЕМЕЩЕНИЕ</span>
+                            <p>
+                                Продукт <b>{alert.product}</b> перемещен:<br/>
+                                {alert.from > 0 ? `Платформа ${alert.from} → ${alert.to}` : `Задублирован на платформе ${alert.to}`}
+                            </p>
+                        </div>
+                        <button className="alert-close" onClick={() => removeAlert(alert.id)}>×</button>
+                    </div>
+                ))}
             </div>
+
+            <div className="dashboard-status-info">
+                {isLoadingHistory && <span className="sync-loader">🔄 Синхронизация истории...</span>}
+                <div className="platform-info">
+                    {selectedPlatform ? (
+                        <span className="platform-active-tag">
+                            Платформа №{selectedPlatform}
+                            <span className="dot-online"></span>
+                        </span>
+                    ) : (
+                        <span className="waiting-text">Ожидание выбора платформы...</span>
+                    )}
+                </div>
+            </div>
+
             <PairList platform={selectedPlatform} products={products} />
         </div>
     );

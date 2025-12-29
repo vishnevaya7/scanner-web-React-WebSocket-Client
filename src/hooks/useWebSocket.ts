@@ -61,7 +61,7 @@ export function useWebSocket({ maxRetries = 50, autoReconnect = true, onMessage 
                 setIsConnected(true);
                 retriesRef.current = 0;
                 onMessageRef.current?.({ event: 'register_start' });
-                ws.send(JSON.stringify({ event: 'register', token, is_input: false }));
+                ws.send(JSON.stringify({ event: 'register', token, type: 'READER' }));
             };
 
             ws.onmessage = (event) => {

@@ -10,6 +10,10 @@
     --shadow: 0 12px 32px rgba(0, 0, 0, 0.7);
     --glow: 0 0 15px rgba(0, 242, 255, 0.3);
     font-size: 16px;
+    --text-main: var(--text-primary);    /* Алиас для совместимости с кодом */
+    --accent-overwrite: #ff9800;        /* Оранжевый Tesla-style для дублей */
+    --accent-moving: #ff3b3b;
+    --accent-blue: #00f2ff;
 }
 
 * { box-sizing: border-box; }

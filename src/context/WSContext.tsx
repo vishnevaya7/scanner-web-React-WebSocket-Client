@@ -13,7 +13,7 @@ const WSContext = createContext<WSContextType | undefined>(undefined);
 
 interface RegisterSuccessMessage {
     event: "register_success";
-    current_platform: number;
+    current_platform: number | null; // Разрешаем null
     input_count: number;
 }
 
@@ -22,7 +22,7 @@ function isRegisterSuccess(msg: any): msg is RegisterSuccessMessage {
         typeof msg === 'object' &&
         msg !== null &&
         msg.event === "register_success" &&
-        typeof msg.current_platform === 'number'
+        (typeof msg.current_platform === 'number' || msg.current_platform === null) // Исправлено
     );
 }
 
@@ -63,18 +63,31 @@ export function WSProvider({ children }: { children: ReactNode }) {
         // ПРОВЕРКА 1: Успешная регистрация (при входе в приложение)
         if (isRegisterSuccess(msg)) {
             setHasScannerConnection(msg.input_count > 0);
-            fetchTodayHistory(msg.current_platform);
+            if (msg.current_platform !== null) {
+                fetchTodayHistory(msg.current_platform);
+            }
+        }
+
+        if (msg.event === 'scanner_connected') {
+            setHasScannerConnection(true);
+        }
+        if (msg.event === 'scanner_refused') {
+            setHasScannerConnection(false);
+            setHistoryToday([]); // Сбрасываем историю, если сканнер ушел
         }
 
         // ПРОВЕРКА 2: Смена платформы (когда сканнер пикнул новую платформу)
         // Внутри addMessage в WSProvider.tsx
-        if (msg.event === 'change_platform') {
-            const platformId = msg.platform || msg.current_platform;
+        if (msg.type === 'change_platform' || msg.event === 'change_platform') {
+            const platformId = msg.data?.platform || msg.platform;
             if (platformId) {
-                // Мы НЕ очищаем массив здесь, чтобы Dashboard мог показать "Загрузка..."
-                // поверх старых данных или просто плавно их заменить.
                 fetchTodayHistory(platformId);
             }
+        }
+
+        // ОБРАБОТКА ПЕРЕМЕЩЕНИЯ (Удаление со старой платформы)
+        if (msg.type === 'product_moved' || msg.event === 'product_moved') {
+            console.log("🚨 ДАННЫЕ О ПЕРЕЕЗДЕ ПОЛУЧЕНЫ:", msg);
         }
     }, [fetchTodayHistory]);
 

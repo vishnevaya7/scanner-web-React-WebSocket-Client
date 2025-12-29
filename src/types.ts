@@ -35,6 +35,7 @@ export interface HistoryItem {
     timestamp: string;
     legacy_synced: number;     // 1=успех, 0=в процессе, -1=ошибка
     legacy_integration_error?: string | null;
+    is_overwrite?: boolean;
 }
 
 export interface HistoryResponse {

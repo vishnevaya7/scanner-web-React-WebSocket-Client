@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom';
-import './styles/Sidebar.css'; // Импорт локальных стилей
+import './styles/Sidebar.css';
 
 type Props = {
     isOpen: boolean;
@@ -11,9 +11,14 @@ export default function Sidebar({ isOpen, onClose }: Props) {
         <aside className={`sidebar ${isOpen ? 'open' : 'closed'}`}>
             <div className="sidebar-title">Сканер пар</div>
             <nav className="sidebar-nav">
-                <NavLink to="/dashboard" className={({ isActive }) => `side-link ${isActive ? 'active' : ''}`} onClick={onClose}>
-                    <span className="side-icon">📊</span>
+                <NavLink to="/dashboard" end className={({ isActive }) => `side-link ${isActive ? 'active' : ''}`} onClick={onClose}>
+                    <span className="side-icon">🏠</span>
                     <span className="side-text">Мониторинг</span>
+                </NavLink>
+                {/* НОВАЯ ССЫЛКА */}
+                <NavLink to="/dashboard/analytics" className={({ isActive }) => `side-link ${isActive ? 'active' : ''}`} onClick={onClose}>
+                    <span className="side-icon">📈</span>
+                    <span className="side-text">Аналитика</span>
                 </NavLink>
                 <NavLink to="/dashboard/history" className={({ isActive }) => `side-link ${isActive ? 'active' : ''}`} onClick={onClose}>
                     <span className="side-icon">📋</span>

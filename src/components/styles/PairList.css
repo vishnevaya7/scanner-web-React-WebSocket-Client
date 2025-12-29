@@ -1,3 +1,5 @@
+/* ОСТАВЛЯЕМ ТОЛЬКО СЕТКУ И КАРТОЧКИ */
+
 .pair-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
@@ -5,7 +7,16 @@
     margin-top: 1rem;
 }
 
-/* Стили карточки */
+/* Стили карточки платформы */
+.card {
+    background: var(--bg-card, #121214);
+    border: 1px solid var(--border, #333);
+    border-radius: 12px;
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+}
+
 .card-header {
     display: flex;
     justify-content: space-between;
@@ -15,19 +26,27 @@
     padding-bottom: 0.75rem;
 }
 
+.card-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text-main, #eee);
+}
+
 .card-badge {
     background: rgba(0, 242, 255, 0.1);
-    color: var(--accent-connected);
+    color: var(--accent-connected, #00f2ff);
     padding: 0.25rem 0.6rem;
     border-radius: 4px;
     font-size: 0.8rem;
     font-family: 'SF Mono', monospace;
 }
 
+/* Контейнер для чипов — оставляем только позиционирование */
 .products-container {
     display: flex;
     flex-wrap: wrap;
     gap: 0.75rem;
+    min-height: 50px; /* Чтобы карточка не схлопывалась */
 }
 
 .status-text {
@@ -38,61 +57,14 @@
 }
 
 .card-footer {
-    margin-top: 1.5rem;
+    margin-top: auto; /* Прижимаем к низу */
+    padding-top: 1.5rem;
     font-size: 0.75rem;
     color: var(--text-muted);
     opacity: 0.6;
 }
 
-/* --- Стили Чипов --- */
-
-.product-chip {
-    background: #1a1a1e;
-    border: 1px solid var(--border);
-    padding: 0.4rem 0.9rem;
-    border-radius: 6px;
-    font-family: 'SF Mono', monospace;
-    font-size: 0.9rem;
-    color: var(--text-muted);
-    /* Убираем любые фильтры, оставляем только трансформации и цвета */
-    transition: border-color 0.6s ease, background-color 0.6s ease, box-shadow 0.6s ease;
-}
-
-/* Приглушенное состояние для "соседей" (тех, что пикнули до 3 сек назад) */
-.recent-scan {
-    border-color: rgba(0, 242, 255, 0.2) !important;
-    background: rgba(0, 242, 255, 0.02) !important;
-    color: rgba(0, 242, 255, 0.7) !important;
-}
-
-/* ПОСЛЕДНИЙ ПИК: Максимально четкий и яркий */
-.last-scanned-peak {
-    z-index: 10;
-    color: #ffffff !important; /* Чисто белый текст для максимальной четкости */
-    /* Самый яркий сплошной бордер без прозрачности на старте */
-    border: 1.5px solid #00f2ff !important;
-
-    animation: sharp-peak-flash 2s cubic-bezier(0.1, 0.8, 0.2, 1) forwards;
-}
-
-@keyframes sharp-peak-flash {
-    0% {
-        /* Вспышка за счет теней, не затрагивающая четкость шрифта */
-        background: rgba(0, 242, 255, 0.2);
-        box-shadow:
-                0 0 15px 2px rgba(0, 242, 255, 0.5),      /* Внешнее свечение */
-                inset 0 0 8px 1px rgba(0, 242, 255, 0.3); /* Внутреннее свечение */
-        transform: scale(1.05);
-    }
-    10% {
-        /* Удерживаем четкий бордер */
-        border-color: #00f2ff !important;
-    }
-    100% {
-        /* Затухаем до уровня .recent-scan, но сохраняем форму */
-        border-color: rgba(0, 242, 255, 0.3) !important;
-        background: rgba(0, 242, 255, 0.05);
-        box-shadow: 0 0 0px transparent;
-        transform: scale(1);
-    }
-}
+/*
+   ВСЁ, ЧТО НИЖЕ (стили .product-chip, .recent-scan, @keyframes sharp-peak-flash)
+   БЫЛО УДАЛЕНО ОТСЮДА И ПЕРЕНЕСЕНО В ProductChip.css
+*/

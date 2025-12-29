@@ -1,37 +1,48 @@
-.devices-page {
+/* Ваши старые стили остаются без изменений */
+.devices-page { display: flex; flex-direction: column; gap: 1.5rem; }
+.devices-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1rem; }
+.device-status-info { font-size: 0.8rem; color: var(--text-muted); font-family: 'SF Mono', monospace; }
+
+/* Новые стили для информативности */
+.device-info-body {
     display: flex;
     flex-direction: column;
-    gap: 1.5rem;
+    gap: 0.8rem;
+    padding: 0.5rem 0;
 }
 
-.devices-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: 1rem;
-}
-
-.device-card-footer {
+.info-row {
     display: flex;
     justify-content: space-between;
-    align-items: center;
-    margin-top: 1rem;
-    padding-top: 0.75rem;
-    border-top: 1px solid var(--border);
+    font-size: 0.9rem;
+    background: var(--bg-secondary); /* или любой чуть отличный фон */
+    padding: 0.5rem;
+    border-radius: 4px;
 }
 
-.device-status-info {
-    font-size: 0.8rem;
+.id-container {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+.id-label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    font-weight: bold;
     color: var(--text-muted);
-    font-family: 'SF Mono', monospace;
 }
 
-.device-error-text {
-    color: var(--accent-danger);
-    font-size: 0.85rem;
+.id-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem;
 }
 
-.device-loading-inline {
-    margin-left: 1rem;
-    font-size: 0.85rem;
-    color: var(--accent-connected);
+.id-tag {
+    background: rgba(255, 255, 255, 0.05);
+    padding: 0.2rem 0.4rem;
+    border-radius: 3px;
+    border: 1px solid var(--border);
+    font-size: 0.7rem !important;
 }

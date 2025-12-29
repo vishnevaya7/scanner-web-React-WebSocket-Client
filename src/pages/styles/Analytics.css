@@ -1,0 +1,203 @@
+.analytics-container {
+    padding: 1rem 0;
+    animation: fadeIn 0.3s ease;
+}
+
+.analytics-header {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.history-title {
+    margin: 0;
+    font-size: 1.5rem;
+}
+
+/* Панель фильтрации */
+.filter-panel {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.2rem;
+    background: var(--bg-secondary);
+    padding: 1.2rem;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    align-items: flex-end;
+}
+
+.filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.filter-group label {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 600;
+}
+
+/* ОБЪЕДИНЕННЫЙ ВЫБОР ДАТ (как в HistoryPage) */
+.date-range-combined {
+    display: flex;
+    align-items: center;
+    background: var(--bg-primary);
+    border: 1px solid var(--border);
+    padding: 0 1rem;
+    border-radius: 8px;
+    gap: 12px;
+    height: 38px;
+    transition: all 0.2s ease;
+}
+
+.date-range-combined:focus-within {
+    border-color: var(--accent-connected);
+    box-shadow: var(--glow);
+}
+
+.date-range-combined input[type="date"] {
+    background: transparent !important;
+    border: none !important;
+    color: var(--text-primary);
+    font-family: 'SF Mono', monospace;
+    font-size: 0.85rem;
+    outline: none;
+    cursor: pointer;
+    width: 130px;
+    padding: 0;
+}
+
+.date-separator {
+    color: var(--accent-connected);
+    font-weight: 900;
+    font-family: 'SF Mono', monospace;
+    user-select: none;
+}
+
+/* Общие стили для селектов */
+.filter-panel select {
+    background: var(--bg-primary);
+    border: 1px solid var(--border);
+    color: var(--text-primary);
+    padding: 0 0.7rem;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    height: 38px;
+    outline: none;
+    transition: all 0.2s ease;
+    min-width: 180px;
+    cursor: pointer;
+}
+
+.filter-panel select:focus {
+    border-color: var(--accent-connected);
+    box-shadow: var(--glow);
+}
+
+/* Кнопка сброса */
+.reset-filter-btn {
+    width: 38px;
+    height: 38px;
+    background: rgba(255, 59, 59, 0.1);
+    border: 1px solid var(--accent-danger);
+    color: var(--accent-danger);
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: 0.2s;
+}
+
+.reset-filter-btn:hover {
+    background: var(--accent-danger);
+    color: white;
+}
+
+/* Карточки статистики */
+.stats-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.stat-card {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    padding: 1.5rem;
+    border-radius: 12px;
+    transition: transform 0.2s;
+}
+
+.stat-card:hover {
+    transform: translateY(-2px);
+}
+
+.stat-value {
+    font-size: 2rem;
+    font-weight: 800;
+    margin-top: 0.5rem;
+    font-family: 'SF Mono', monospace;
+}
+
+.color-move { color: var(--accent-overwrite); }
+.color-error { color: var(--accent-danger); }
+
+/* Сетка графиков */
+.charts-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+}
+
+.chart-box {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    padding: 1.5rem;
+    border-radius: 12px;
+}
+
+.chart-box.full-width { grid-column: 1 / -1; }
+
+.chart-box h3 {
+    font-size: 0.85rem;
+    margin-bottom: 1.5rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+/* Настройка иконки календаря */
+input::-webkit-calendar-picker-indicator {
+    filter: invert(1);
+    opacity: 0.4;
+    cursor: pointer;
+}
+
+input::-webkit-calendar-picker-indicator:hover {
+    opacity: 0.8;
+}
+
+@media (max-width: 900px) {
+    .charts-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 650px) {
+    .date-range-combined {
+        width: 100%;
+        justify-content: space-between;
+    }
+    .date-range-combined input[type="date"] {
+        width: 45%;
+    }
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(5px); }
+    to { opacity: 1; transform: translateY(0); }
+}

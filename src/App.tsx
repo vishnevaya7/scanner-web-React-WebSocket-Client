@@ -6,6 +6,7 @@ import Dashboard from './pages/Dashboard';
 import Devices from './pages/Devices';
 import HistoryPage from './pages/HistoryPage';
 import ProtectedLayout from "./ProtectedLayout.tsx";
+import Analytics from './pages/Analytics';
 import './App.css';
 
 // Компонент для обработки логики входа
@@ -41,6 +42,7 @@ export default function App() {
                             <Route index element={<Dashboard />} />
                             <Route path="history" element={<HistoryPage />} />
                             <Route path="devices" element={<Devices />} />
+                            <Route path="analytics" element={<Analytics />} />
                         </Route>
 
                         {/* Обработка 404 и редирект только для неавторизованных путей */}

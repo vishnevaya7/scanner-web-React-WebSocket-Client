@@ -1,53 +1,280 @@
-.history-container { padding: 1rem 0; animation: fadeIn 0.3s ease; }
-
-.history-header {
-    display: flex; justify-content: space-between; align-items: baseline;
-    margin-bottom: 2rem; border-bottom: 1px solid var(--border); padding-bottom: 1rem;
+.history-container {
+    padding: 1rem 0;
+    animation: fadeIn 0.3s ease;
 }
 
-.history-title { font-size: 1.8rem; font-weight: 800; letter-spacing: -0.02em; margin: 0; }
-.history-stats { font-family: 'SF Mono', monospace; color: var(--accent-connected); }
+.history-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 2rem;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 1rem;
+}
+
+.history-title {
+    font-size: 1.8rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    margin: 0;
+}
+
+.history-stats {
+    font-family: 'SF Mono', monospace;
+    color: var(--accent-connected);
+}
+
+.page-info {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-left: 8px;
+}
+
+/* УПРАВЛЕНИЕ И КОМБИНИРОВАННЫЕ ДАТЫ */
+.history-controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    align-items: center;
+}
+
+.date-range-combined {
+    display: flex;
+    align-items: center;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    padding: 0.4rem 1rem;
+    border-radius: 8px;
+    gap: 12px;
+    box-shadow: var(--shadow);
+}
+
+.date-range-combined input[type="date"] {
+    background: transparent;
+    border: none;
+    color: var(--text-primary);
+    font-family: 'SF Mono', monospace;
+    font-size: 0.85rem;
+    outline: none;
+    cursor: pointer;
+}
+
+.date-separator {
+    color: var(--accent-connected);
+    font-weight: 900;
+    font-family: 'SF Mono', monospace;
+}
 
 /* ФИЛЬТРЫ */
 .filters-panel {
-    background: var(--bg-secondary); border: 1px solid var(--border);
-    border-radius: 12px; padding: 1.5rem; margin-bottom: 2rem; box-shadow: var(--shadow);
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    box-shadow: var(--shadow);
+}
+
+.animated-fade-in {
+    animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
 .filters-grid {
-    display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1.25rem;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 1.25rem;
 }
 
-.filter-group label { display: block; font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; margin-bottom: 0.5rem; }
+.filter-group label {
+    display: block;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    margin-bottom: 0.5rem;
+}
 
 .history-input, .history-select {
-    width: 100%; background: #000; color: var(--text-primary);
-    border: 1px solid var(--border); border-radius: 8px; padding: 0.6rem;
-    font-family: 'SF Mono', monospace; font-size: 0.85rem;
+    width: 100%;
+    background: #000;
+    color: var(--text-primary);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.6rem;
+    font-family: 'SF Mono', monospace;
+    font-size: 0.85rem;
+    outline: none;
 }
 
-/* ТАБЛИЦА */
+.history-select:focus, .history-input:focus {
+    border-color: var(--accent-connected);
+}
+
+/* ТАБЛИЦА И СОРТИРОВКА */
 .history-table-container {
-    background: var(--bg-secondary); border-radius: 12px;
-    border: 1px solid var(--border); overflow-x: auto;
+    background: var(--bg-secondary);
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    overflow-x: auto;
 }
 
 .history-table { width: 100%; border-collapse: collapse; }
+
 .history-th {
-    padding: 1rem; text-align: left; font-size: 0.7rem; font-weight: 700;
-    color: var(--text-muted); text-transform: uppercase; border-bottom: 2px solid var(--border);
+    padding: 1rem;
+    text-align: left;
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    border-bottom: 2px solid var(--border);
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
 }
 
-.history-td { padding: 1rem; font-size: 0.9rem; border-bottom: 1px solid var(--border); }
-.history-table tbody tr:hover { background: rgba(255, 255, 255, 0.03); }
+.history-th.sortable:hover {
+    color: var(--text-primary);
+    background: rgba(255, 255, 255, 0.02);
+}
 
-/* БЕЙДЖИ И СТАТУСЫ */
-.status-badge { padding: 0.3rem 0.6rem; border-radius: 4px; font-size: 0.75rem; font-weight: 600; border: 1px solid var(--border); }
+/* Иконки сортировки */
+.sort-icon {
+    display: inline-block;
+    margin-left: 8px;
+    font-family: 'SF Mono', monospace;
+}
+
+.sort-icon.inactive {
+    opacity: 0.2;
+}
+
+.sort-icon.active {
+    color: var(--accent-connected);
+    text-shadow: 0 0 8px var(--accent-connected);
+}
+
+.history-td {
+    padding: 1rem;
+    font-size: 0.9rem;
+    border-bottom: 1px solid var(--border);
+}
+
+.row-overwrite {
+    background: rgba(255, 71, 87, 0.03);
+}
+
+.history-table tbody tr:hover {
+    background: rgba(255, 255, 255, 0.03);
+}
+
+/* БЕЙДЖИ ТИПА ЗАПИСИ */
+.type-badge {
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.type-badge.move {
+    color: #ff4757;
+    background: rgba(255, 71, 87, 0.1);
+    border: 1px solid rgba(255, 71, 87, 0.3);
+}
+
+.type-badge.new {
+    color: var(--accent-connected);
+    background: rgba(0, 242, 255, 0.1);
+    border: 1px solid rgba(0, 242, 255, 0.3);
+}
+
+/* ПАГИНАЦИЯ В ШАПКЕ */
+.pagination-mini {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    margin-left: auto;
+    background: var(--bg-secondary);
+    padding: 0.4rem 0.8rem;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    font-family: 'SF Mono', monospace;
+    font-size: 0.85rem;
+}
+
+.pagination-mini button {
+    background: transparent;
+    border: none;
+    color: var(--accent-connected);
+    cursor: pointer;
+    font-size: 1.2rem;
+    padding: 0 5px;
+}
+
+.pagination-mini button:disabled {
+    color: var(--text-muted);
+    cursor: not-allowed;
+    opacity: 0.3;
+}
+
+.history-btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-primary);
+    padding: 0.6rem 1.2rem;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-family: 'SF Mono', monospace;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.history-btn:hover {
+    border-color: var(--accent-connected);
+    background: rgba(0, 242, 255, 0.05);
+    box-shadow: 0 0 10px rgba(0, 242, 255, 0.1);
+}
+
+.history-btn.active {
+    background: var(--accent-connected);
+    color: #000;
+    border-color: var(--accent-connected);
+    font-weight: 700;
+}
+
+/* Дополнительные стили для статусов и платформы, которые могли потеряться */
+.platform-badge {
+    background: #1a1a1e;
+    border: 1px solid var(--border);
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    font-family: 'SF Mono', monospace;
+    font-size: 0.8rem;
+}
+
+.status-badge {
+    padding: 0.3rem 0.6rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    border: 1px solid var(--border);
+}
+
 .status-success { color: var(--accent-connected); border-color: rgba(0, 242, 255, 0.3); }
 .status-error { color: var(--accent-danger); border-color: rgba(255, 59, 59, 0.3); }
-.platform-badge { background: #1a1a1e; border: 1px solid var(--border); padding: 0.2rem 0.5rem; border-radius: 4px; font-family: 'SF Mono'; }
+.status-warning { color: #ffa502; border-color: rgba(255, 165, 2, 0.3); }
 
-/* ПАГИНАЦИЯ */
-.pagination { display: flex; justify-content: center; align-items: center; gap: 1.5rem; padding: 1.5rem; }
-.pagination-btn { background: transparent; border: 1px solid var(--border); color: var(--text-muted); padding: 0.5rem 1rem; border-radius: 8px; cursor: pointer; }
-.pagination-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+.font-mono { font-family: 'SF Mono', monospace; }
+.time-cell { color: var(--text-muted); font-size: 0.8rem; }
