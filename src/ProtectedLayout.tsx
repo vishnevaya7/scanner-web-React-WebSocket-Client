@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { Navigate, Outlet } from 'react-router-dom';
+import {Navigate, Outlet, useNavigate} from 'react-router-dom';
 import { useAuth } from "./context/AuthContext.tsx";
 import { useWS } from "./context/WSContext.tsx";
 import { useWebSocket } from "./hooks/useWebSocket.ts";
@@ -12,7 +12,8 @@ export default function ProtectedLayout() {
     const { isAuthenticated, login, isLoading: isAuthLoading } = useAuth();
     const { addMessage, hasScannerConnection, historyToday, isLoadingHistory } = useWS();
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-
+    const { setIsAuthenticated } = useAuth(); // Получите сеттер из контекста
+    const navigate = useNavigate();
     const globalOnMessage = useCallback((data: unknown) => {
         addMessage(data);
     }, [addMessage]);
@@ -42,7 +43,8 @@ export default function ProtectedLayout() {
     const handleLogout = () => {
         disconnect(); // Явно закрываем WS перед выходом
         auth.clear();
-        window.location.href = '/login';
+        setIsAuthenticated(false);
+        navigate('/login', { replace: true });
     };
 
     return (
@@ -64,10 +66,9 @@ export default function ProtectedLayout() {
                             {isSidebarOpen ? '✕' : '☰'}
                         </button>
 
-                        <Header title={`Сканер пар — ${login}`} />
+                        <Header title={`Пользователь: ${login}`} />
 
                         <div className="header-actions">
-                            {isLoadingHistory && <span className="loader-mini">🔄</span>}
                             <ScannerStatus
                                 scannerStatus={currentScannerStatus}
                                 url={url}
@@ -79,11 +80,6 @@ export default function ProtectedLayout() {
                 </header>
 
                 <main className="main">
-                    {!isLoadingHistory && historyToday.length === 0 && isConnected && (
-                        <div className="empty-today-banner" style={{ textAlign: 'center', padding: '10px', background: '#fff3cd' }}>
-                            Нет сканирований за сегодня
-                        </div>
-                    )}
                     <Outlet context={{ historyToday, isLoadingHistory }} />
                 </main>
             </div>

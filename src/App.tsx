@@ -34,11 +34,13 @@ export default function App() {
             <WSProvider>
                 <Router>
                     <Routes>
+                        <Route path="/login" element={<Login />} />
                         {/* Корневой путь теперь просто рендерит AuthRedirect,
                 который сам решит, оставить пользователя на месте или отправить на /dashboard */}
                         <Route path="/" element={<AuthRedirect><Navigate to="/dashboard" replace /></AuthRedirect>} />
 
                         <Route path="/dashboard" element={<ProtectedLayout />}>
+                            <Route index element={<Dashboard />} />
                             <Route index element={<Dashboard />} />
                             <Route path="history" element={<HistoryPage />} />
                             <Route path="devices" element={<Devices />} />
