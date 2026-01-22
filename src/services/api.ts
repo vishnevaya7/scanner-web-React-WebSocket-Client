@@ -1,19 +1,12 @@
 import type { PlatformMap, ScannerInfoResponse, HistoryResponse } from '../types';
 import { auth } from './auth';
 
-// Определяем базовый URL бэкенда.
-// Если вы используете прокси в Vite, оставьте пустую строку.
-// Если нет — укажите адрес бэкенда явно.
-const BASE_URL = import.meta.env.VITE_API_URL || 'http://192.168.0.103:8000';
 
-/**
- * Универсальный метод запроса.
- */
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
     const token = auth.getToken();
 
     // Склеиваем базовый URL и путь. Убираем двойные слэши если они возникнут.
-    const fullUrl = `${BASE_URL}${path.startsWith('/') ? path : '/' + path}`;
+    const fullUrl = `${path.startsWith('/') ? path : '/' + path}`;
 
     const res = await fetch(fullUrl, {
         ...init,

@@ -1,7 +1,12 @@
 import { useRef, useCallback, useMemo, useEffect, useState } from 'react';
 import { auth } from '../services/auth';
 
-const BACKEND_WS_URL = import.meta.env.VITE_BACKEND_WS_URL || 'ws://192.168.0.103:8000';
+
+const getSocketUrl = () => {
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const host = window.location.host;
+    return `${protocol}//${host}/ws`;
+};
 
 export interface UseWebSocketProps {
     maxRetries?: number;
@@ -16,7 +21,9 @@ export function useWebSocket({ maxRetries = 50, autoReconnect = true, onMessage 
     const closedByUserRef = useRef(false);
     const [isConnected, setIsConnected] = useState(false);
 
-    const url = useMemo(() => BACKEND_WS_URL + '/ws', []);
+    // Вычисляем URL один раз при инициализации
+    const url = useMemo(() => getSocketUrl(), []);
+
     const onMessageRef = useRef(onMessage);
     onMessageRef.current = onMessage;
 
@@ -26,6 +33,7 @@ export function useWebSocket({ maxRetries = 50, autoReconnect = true, onMessage 
             reconnectTimerRef.current = null;
         }
         if (wsRef.current) {
+            // Убираем слушатели, чтобы не вызывать колбэки на мертвом сокете
             wsRef.current.onopen = null;
             wsRef.current.onclose = null;
             wsRef.current.onmessage = null;
@@ -54,6 +62,7 @@ export function useWebSocket({ maxRetries = 50, autoReconnect = true, onMessage 
         closedByUserRef.current = false;
 
         try {
+            console.log(`[WS] Connecting to ${url}...`); // Лог для отладки
             const ws = new WebSocket(url);
             wsRef.current = ws;
 
@@ -69,8 +78,8 @@ export function useWebSocket({ maxRetries = 50, autoReconnect = true, onMessage 
                 try {
                     const data = JSON.parse(event.data);
 
-                    // Логирование входящих данных
-                    console.log(`[WS Receive][${new Date().toLocaleTimeString()}]:`, data);
+                    // Логирование можно убрать в проде или сделать по уровню
+                    // console.log(`[WS Receive][${new Date().toLocaleTimeString()}]:`, data);
 
                     if (data.token && data.login) {
                         auth.setToken(data.token);
@@ -84,7 +93,10 @@ export function useWebSocket({ maxRetries = 50, autoReconnect = true, onMessage 
 
             ws.onclose = (e) => {
                 setIsConnected(false);
-                console.warn(`[WS Close]: Code ${e.code}, Reason: ${e.reason || 'no reason'}`);
+                // Игнорируем ошибки при нормальном закрытии (1000) или обновлении страницы
+                if (e.code !== 1000) {
+                     console.warn(`[WS Close]: Code ${e.code}, Reason: ${e.reason || 'no reason'}`);
+                }
 
                 if (!closedByUserRef.current && autoReconnect && retriesRef.current < maxRetries) {
                     const timeout = Math.min(30000, 1000 * Math.pow(2, retriesRef.current));
@@ -95,7 +107,9 @@ export function useWebSocket({ maxRetries = 50, autoReconnect = true, onMessage 
             };
 
             ws.onerror = (err) => {
-                console.error('[WS Error]:', err);
+                // WebSocket error event обычно пустой в JS из соображений безопасности,
+                // поэтому просто логируем факт ошибки
+                console.error('[WS Error] Connection failed');
             };
         } catch (e) {
             console.error("[WS Connection error]:", e);
@@ -111,13 +125,18 @@ export function useWebSocket({ maxRetries = 50, autoReconnect = true, onMessage 
 
     useEffect(() => {
         connect();
-    }, [connect]);
+        // Cleanup при размонтировании компонента
+        return () => {
+            closedByUserRef.current = true; // предотвращаем реконнект
+            cleanup();
+        };
+    }, [connect, cleanup]);
 
     return {
         isConnected,
         sendJson: (p: unknown) => {
             if (wsRef.current?.readyState === WebSocket.OPEN) {
-                console.log('[WS Send]:', p);
+                // console.log('[WS Send]:', p);
                 wsRef.current.send(JSON.stringify(p));
             } else {
                 console.warn('[WS Send failed]: Socket not open');

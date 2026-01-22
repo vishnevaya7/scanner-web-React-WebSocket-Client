@@ -14,7 +14,7 @@ export default defineConfig({
         }
     },
     server: {
-        port: 5173,
+        port: 80,
         host: true,
         proxy: {
             '/auth': {
