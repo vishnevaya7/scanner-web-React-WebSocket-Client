@@ -55,6 +55,7 @@ export const api = {
         date_from?: string;
         date_to?: string;
         platform?: number;
+        login?: string;
     }) {
         const q = new URLSearchParams();
         if (params) {
@@ -77,35 +78,33 @@ export const api = {
         product?: number;
         login?: string;
         legacy_synced?: number;
-        is_overwrite?: boolean;
+        is_overwritten?: boolean;
         page?: number;
         size?: number;
         sort?: string;
         order?: 'asc' | 'desc';
+        id?: string | number;
     }): Promise<HistoryResponse> {
         const q = new URLSearchParams();
 
         if (params) {
+            // Извлекаем sort и order отдельно, чтобы они не попали в общий цикл Object.entries
             const { sort, order, ...rest } = params;
 
-            // Формируем строку сортировки: sort=timestamp,desc
             if (sort) {
-                const sortValue = order ? `${sort},${order}` : sort;
-                q.append('sort', sortValue);
+                // Если передан и sort и order, склеиваем их для FastAPI-style сортировки
+                const sortParam = order ? `${sort},${order}` : sort;
+                q.append('sort', sortParam);
             }
 
-            // Добавляем все остальные параметры
             Object.entries(rest).forEach(([k, v]) => {
                 if (v !== undefined && v !== null && v !== '') {
-                    // Для boolean параметров (is_overwrite) передаем строку
                     q.append(k, String(v));
                 }
             });
         }
 
         const queryString = q.toString();
-        const path = `/api/history${queryString ? `?${queryString}` : ''}`;
-
-        return request<HistoryResponse>(path);
+        return request<HistoryResponse>(`/api/history${queryString ? `?${queryString}` : ''}`);
     },
 };

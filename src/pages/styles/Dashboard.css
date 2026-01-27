@@ -1,76 +1,111 @@
-/* Контейнер: опустили ниже (на 100px), чтобы не перекрывался хедером */
-.move-alerts-container {
-    position: fixed !important;
-    top: 20px !important; /* Подняли в самый верх */
-    right: 20px !important;
-    width: 350px !important;
-    height: auto !important;
-    min-height: 50px;
-    z-index: 999999 !important; /* Максимальный приоритет над всем */
-    display: flex !important;
-    flex-direction: column !important;
-    gap: 12px !important;
+/* 📊 ГЛАВНАЯ СТРАНИЦА ДАШБОРДА */
+.dashboard-page {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    position: relative;
+}
+
+/* 🔔 КОНТЕЙНЕР УВЕДОМЛЕНИЙ (Move Alerts) */
+.dashboard-page .move-alerts-container {
+    position: fixed;
+    top: 80px;
+    right: 20px;
+    width: 320px;
+    z-index: 2000;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
     pointer-events: none;
 }
 
-.move-alert-card {
+.dashboard-page .move-alert-card {
     pointer-events: auto;
-    background: #FF4757 !important; /* Сделаем его ЯРКО-КРАСНЫМ для теста */
-    color: white !important;
-    padding: 20px !important;
-    border-radius: 12px !important;
-    box-shadow: 0 15px 40px rgba(255, 71, 87, 0.4) !important;
-    display: flex !important;
-    align-items: center !important;
-    gap: 15px !important;
-    border: 2px solid white !important;
-    animation: slideIn 0.5s ease-out !important;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--accent-danger);
+    border-radius: 12px;
+    padding: 16px;
+    box-shadow: var(--shadow);
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    animation: slideIn 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+    backdrop-filter: blur(10px);
 }
 
-
+.alert-icon-box {
+    font-size: 1.2rem;
+}
 
 .alert-title {
     font-size: 10px;
-    text-transform: uppercase;
+    font-weight: 800;
     letter-spacing: 1px;
-    color: #ff4757;
-    font-weight: bold;
-    display: block;
+    color: var(--accent-danger);
     margin-bottom: 4px;
+    display: block;
+    text-transform: uppercase;
 }
 
 .alert-content p {
     margin: 0;
     font-size: 13px;
     line-height: 1.4;
-    color: #dfe6e9;
-}
-
-.alert-content b {
-    color: #fff;
-    font-size: 14px;
+    color: var(--text-primary);
 }
 
 .alert-close {
-    background: rgba(255, 255, 255, 0.1);
+    background: transparent;
     border: none;
-    color: white;
+    color: var(--text-muted);
+    font-size: 20px;
     cursor: pointer;
-    font-size: 18px;
-    width: 30px;
-    height: 30px;
-    border-radius: 50%;
+    margin-left: auto;
+    padding: 0 4px;
+}
+
+/* ⚙️ СТАТУСНАЯ ИНФО-ПАНЕЛЬ (Минималистичный лоадер) */
+.dashboard-status-info {
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: background 0.2s;
+    padding: 1rem;
+    margin-bottom: 1rem;
 }
 
-.alert-close:hover {
-    background: rgba(255, 255, 255, 0.2);
+.sync-loader {
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-style: italic;
+}
+
+/* 🔄 АНИМАЦИИ */
+.spinner-mini {
+    display: inline-block;
+    animation: spin 2s linear infinite;
+    opacity: 0.7;
 }
 
 @keyframes slideIn {
-    from { transform: translateX(120%); opacity: 0; }
+    from { transform: translateX(100%); opacity: 0; }
     to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+/* 📱 АДАПТИВНОСТЬ */
+@media (max-width: 768px) {
+    .dashboard-page .move-alerts-container {
+        top: 70px;
+        right: 10px;
+        left: 10px;
+        width: auto;
+    }
 }

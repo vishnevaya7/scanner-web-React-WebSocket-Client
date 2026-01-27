@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
 import { auth } from '../services/auth';
 import { useAuth } from '../context/AuthContext';
-import './styles/Login.css'; // Импорт стилей
+import './styles/Login.css';
 
 export default function Login() {
     const [login, setLogin] = useState('');
@@ -13,6 +13,7 @@ export default function Login() {
 
     const { isAuthenticated, setIsAuthenticated } = useAuth();
 
+    // Если уже залогинены — сразу на дашборд
     useEffect(() => {
         if (isAuthenticated) {
             navigate('/dashboard', { replace: true });
@@ -45,11 +46,11 @@ export default function Login() {
         <div className="login-page">
             <div className="card login-card">
                 <div className="card-header">
-                    <div className="card-title">Вход в систему</div>
+                    <h2 className="card-title">Вход в систему</h2>
                 </div>
                 <form onSubmit={onSubmit} className="login-form">
-                    <label className="login-label">
-                        <span className="device-status-info">Логин</span>
+                    <div className="login-field">
+                        <label className="login-label">Логин</label>
                         <input
                             value={login}
                             onChange={(e) => setLogin(e.target.value)}
@@ -57,11 +58,14 @@ export default function Login() {
                             required
                             className="login-input"
                             disabled={loading}
+                            autoFocus
                         />
-                    </label>
-                    <button className="btn" type="submit" disabled={loading}>
+                    </div>
+
+                    <button className="login-submit-btn" type="submit" disabled={loading}>
                         {loading ? 'Входим...' : 'Войти'}
                     </button>
+
                     {error && <div className="login-error">{error}</div>}
                 </form>
             </div>

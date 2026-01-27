@@ -1,5 +1,4 @@
 import { useEffect, useState, useRef } from 'react';
-import Header from '../components/Header';
 import PairList from '../components/PairList';
 import { useWS } from '../context/WSContext';
 import type { PlatformId, ProductScan } from '../types';
@@ -31,7 +30,7 @@ export default function Dashboard() {
     // 1. СИНХРОНИЗАЦИЯ С ИСТОРИЕЙ
     useEffect(() => {
         if (historyToday) {
-            const activeItems = historyToday.filter(item => !item.is_overwrite);
+            const activeItems = historyToday.filter(item => !item.is_overwritten);
             const mapped: ProductScan[] = activeItems.map(item => ({
                 product: item.product,
                 scanId: item.id,
@@ -76,7 +75,7 @@ export default function Dashboard() {
                 const productValue = typeof rawProduct === 'object' && rawProduct !== null
                     ? rawProduct.id
                     : rawProduct;
-                const isOverwrite = !!payload.is_overwrite;
+                const isOverwrite = !!payload.is_overwritten;
 
                 if (productValue) {
                     // ЕСЛИ ПЕРЕЗАПИСЬ — показываем уведомление прямо здесь
@@ -139,18 +138,16 @@ export default function Dashboard() {
 
     return (
         <div className="dashboard-page">
-            <Header title="Мониторинг" />
-
-            {/* КОНТЕЙНЕР УВЕДОМЛЕНИЙ */}
+            {/* Контейнер уведомлений (Move Alerts) */}
             <div className="move-alerts-container">
                 {moveAlerts.map(alert => (
                     <div key={alert.id} className="move-alert-card">
-                        <span className="alert-icon">🔄</span>
+                        <div className="alert-icon-box">🔄</div>
                         <div className="alert-content">
                             <span className="alert-title">ПЕРЕМЕЩЕНИЕ</span>
                             <p>
-                                Продукт <b>{alert.product}</b> перемещен:<br/>
-                                {alert.from > 0 ? `Платформа ${alert.from} → ${alert.to}` : `Задублирован на платформе ${alert.to}`}
+                                Продукт <b>{alert.product}</b>:<br/>
+                                {alert.from > 0 ? `${alert.from} → ${alert.to}` : `Задублирован на платформе ${alert.to}`}
                             </p>
                         </div>
                         <button className="alert-close" onClick={() => removeAlert(alert.id)}>×</button>
@@ -158,21 +155,15 @@ export default function Dashboard() {
                 ))}
             </div>
 
-            <div className="dashboard-status-info">
-                {isLoadingHistory && <span className="sync-loader">🔄 Синхронизация истории...</span>}
-                <div className="platform-info">
-                    {selectedPlatform ? (
-                        <span className="platform-active-tag">
-                            Платформа №{selectedPlatform}
-                            <span className="dot-online"></span>
-                        </span>
-                    ) : (
-                        <span className="waiting-text">Ожидание выбора платформы...</span>
-                    )}
+            {isLoadingHistory && (
+                <div className="dashboard-status-info">
+                <span className="sync-loader">
+                    Синхронизация истории...
+                </span>
                 </div>
-            </div>
+            )}
 
             <PairList platform={selectedPlatform} products={products} />
         </div>
-    );
+    )
 }

@@ -1,16 +1,17 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo, useRef, useCallback } from 'react';
 import { api } from '../services/api';
 import {
-    LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-    BarChart, Bar, Cell, PieChart, Pie
+    AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+    BarChart, Bar, Cell, PieChart, Pie, Legend
 } from 'recharts';
 import './styles/Analytics.css';
 
-const COLORS = ['#00f2ff', '#ff4757', '#ffa502', '#2ed573', '#a29bfe'];
+const COLORS = ['#4fc3f7', '#9575cd', '#ffb74d', '#81c784', '#e57373'];
 
 const Analytics: React.FC = () => {
     const [data, setData] = useState<any>(null);
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(false);
+    const [options, setOptions] = useState({ platforms: [] as any[], users: [] as string[] });
 
     const [filters, setFilters] = useState({
         date_from: '',
@@ -19,50 +20,72 @@ const Analytics: React.FC = () => {
         login: ''
     });
 
-    const [availableOptions, setAvailableOptions] = useState({
-        platforms: [] as any[],
-        users: [] as string[]
-    });
+    // Рефы для открытия календаря при клике
+    const dateFromRef = useRef<HTMLInputElement>(null);
+    const dateToRef = useRef<HTMLInputElement>(null);
 
-    const fetchData = async () => {
+    // 1. Функция загрузки данных (мемоизирована, чтобы не создавать циклов)
+    const loadAnalytics = useCallback(async (f: typeof filters) => {
         setLoading(true);
         try {
-            const params: { date_from?: string; date_to?: string; platform?: number; login?: string } = {};
-
-            if (filters.date_from) params.date_from = filters.date_from;
-            if (filters.date_to) params.date_to = filters.date_to;
-            if (filters.login) params.login = filters.login;
-
-            if (filters.platform !== '') {
-                params.platform = Number(filters.platform);
-            }
+            const params: any = {
+                date_from: f.date_from || undefined,
+                date_to: f.date_to || undefined,
+                platform: f.platform ? Number(f.platform) : undefined,
+                login: f.login || undefined
+            };
 
             const res = await api.getGraphics(params);
             setData(res);
 
-            if (availableOptions.platforms.length === 0) {
-                setAvailableOptions({
-                    platforms: res.by_platform.map((p: any) => p.platform),
-                    users: res.by_user.map((u: any) => u.login)
+            // Инициализация списков фильтров только один раз при первом успехе
+            if (options.users.length === 0 && res.by_user) {
+                setOptions({
+                    platforms: res.by_platform?.map((p: any) => p.platform).sort((a: any, b: any) => a - b) || [],
+                    users: res.by_user?.map((u: any) => u.login).sort() || []
                 });
             }
         } catch (error) {
-            console.error("Ошибка загрузки аналитики:", error);
+            console.error("Analytics Load Error:", error);
         } finally {
             setLoading(false);
         }
-    };
+    }, [options.users.length]);
 
+    // Первая загрузка при монтировании
     useEffect(() => {
-        fetchData();
-    }, [filters]);
+        loadAnalytics(filters);
+    }, [loadAnalytics]);
 
+    // Обработчик изменений фильтров
     const handleFilterChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
-        setFilters(prev => ({ ...prev, [name]: value }));
+        const nextFilters = { ...filters, [name]: value };
+        setFilters(nextFilters);
+        loadAnalytics(nextFilters);
     };
 
-    const resetFilters = () => setFilters({ date_from: '', date_to: '', platform: '', login: '' });
+    // Сброс фильтров
+    const resetFilters = () => {
+        const cleared = { date_from: '', date_to: '', platform: '', login: '' };
+        setFilters(cleared);
+        loadAnalytics(cleared);
+    };
+
+    // 2. Использование useMemo для подготовки данных графика (сортировка)
+    const chartData = useMemo(() => {
+        if (!data?.by_date) return [];
+        return [...data.by_date].sort((a, b) =>
+            new Date(a.date).getTime() - new Date(b.date).getTime()
+        );
+    }, [data]);
+
+    // Программное открытие нативного календаря
+    const triggerPicker = (ref: React.RefObject<HTMLInputElement>) => {
+        if (ref.current && 'showPicker' in ref.current) {
+            ref.current.showPicker();
+        }
+    };
 
     return (
         <div className="analytics-container">
@@ -72,10 +95,11 @@ const Analytics: React.FC = () => {
                 <div className="filter-panel">
                     <div className="filter-group">
                         <label>Период</label>
-                        <div className="date-range-combined">
+                        <div className="date-range-combined" onClick={() => triggerPicker(dateFromRef)}>
                             <input
                                 type="date"
                                 name="date_from"
+                                ref={dateFromRef}
                                 value={filters.date_from}
                                 onChange={handleFilterChange}
                             />
@@ -83,17 +107,19 @@ const Analytics: React.FC = () => {
                             <input
                                 type="date"
                                 name="date_to"
+                                ref={dateToRef}
                                 value={filters.date_to}
                                 onChange={handleFilterChange}
+                                onClick={(e) => { e.stopPropagation(); triggerPicker(dateToRef); }}
                             />
                         </div>
                     </div>
 
                     <div className="filter-group">
-                        <label>Пользователь</label>
+                        <label>Сотрудник</label>
                         <select name="login" value={filters.login} onChange={handleFilterChange}>
                             <option value="">Все сотрудники</option>
-                            {availableOptions.users.map(u => <option key={u} value={u}>{u}</option>)}
+                            {options.users.map(u => <option key={u} value={u}>{u}</option>)}
                         </select>
                     </div>
 
@@ -101,87 +127,82 @@ const Analytics: React.FC = () => {
                         <label>Платформа</label>
                         <select name="platform" value={filters.platform} onChange={handleFilterChange}>
                             <option value="">Все платформы</option>
-                            {availableOptions.platforms.map(p => (
-                                <option key={p} value={String(p)}>Платформа {p}</option>
-                            ))}
+                            {options.platforms.map(p => <option key={p} value={String(p)}>Платформа {p}</option>)}
                         </select>
                     </div>
 
-                    <button className="reset-filter-btn" onClick={resetFilters} title="Сбросить всё">✕</button>
+                    <button className="reset-filter-btn" onClick={resetFilters}>✕</button>
                 </div>
             </div>
 
             <div className="stats-cards">
                 <div className="stat-card">
-                    <label>{filters.login ? `Сканов (${filters.login})` : 'Всего сканов'}</label>
-                    <div className="stat-value">{data?.summary?.total || 0}</div>
+                    <span className="stat-label">Всего сканирований</span>
+                    <div className="stat-value main">{data?.summary?.total || 0}</div>
                 </div>
                 <div className="stat-card">
-                    <label>Перезаписи</label>
-                    <div className="stat-value color-move">{data?.summary?.overwrites || 0}</div>
+                    <span className="stat-label">Перезаписи</span>
+                    <div className="stat-value move">{data?.summary?.overwrites || 0}</div>
                 </div>
                 <div className="stat-card">
-                    <label>Ошибки</label>
-                    <div className="stat-value color-error">{data?.summary?.errors || 0}</div>
+                    <span className="stat-label">Ошибки</span>
+                    <div className="stat-value error">{data?.summary?.errors || 0}</div>
                 </div>
             </div>
 
-            {loading ? (
-                <div className="loading-placeholder">Обновление данных...</div>
-            ) : (
-                <div className="charts-grid">
-                    <div className="chart-box">
-                        <h3>Динамика активности</h3>
-                        <ResponsiveContainer width="100%" height={250}>
-                            <LineChart data={data?.by_date || []}>
-                                <CartesianGrid strokeDasharray="3 3" stroke="#222" vertical={false} />
-                                <XAxis dataKey="date" stroke="#888" fontSize={11} />
-                                <YAxis stroke="#888" fontSize={11} />
-                                <Tooltip contentStyle={{ background: '#111', border: '1px solid #333', borderRadius: '8px' }} />
-                                <Line type="monotone" dataKey="count" stroke="#00f2ff" strokeWidth={3} dot={{ r: 4, fill: '#00f2ff' }} activeDot={{ r: 6 }} />
-                            </LineChart>
-                        </ResponsiveContainer>
-                    </div>
-
-                    <div className="chart-box">
-                        <h3>{filters.login ? 'Доля в общих сканах' : 'Топ пользователей'}</h3>
-                        <ResponsiveContainer width="100%" height={250}>
-                            <PieChart>
-                                <Pie
-                                    data={data?.by_user || []}
-                                    dataKey="count"
-                                    nameKey="login"
-                                    cx="50%" cy="50%"
-                                    innerRadius={60} outerRadius={85}
-                                    paddingAngle={5}
-                                >
-                                    {(data?.by_user || []).map((_: any, index: number) => (
-                                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} stroke="none" />
-                                    ))}
-                                </Pie>
-                                <Tooltip />
-                            </PieChart>
-                        </ResponsiveContainer>
-                    </div>
-
-                    <div className="chart-box full-width">
-                        <h3>Распределение нагрузки по платформам</h3>
-                        <ResponsiveContainer width="100%" height={300}>
-                            <BarChart data={data?.by_platform || []}>
-                                <CartesianGrid strokeDasharray="3 3" stroke="#222" vertical={false} />
-                                <XAxis dataKey="platform" stroke="#888" />
-                                <YAxis stroke="#888" />
-                                <Tooltip cursor={{ fill: 'rgba(255,255,255,0.05)' }} />
-                                <Bar dataKey="count" radius={[4, 4, 0, 0]} maxBarSize={50}>
-                                    {(data?.by_platform || []).map((_: any, index: number) => (
-                                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                                    ))}
-                                </Bar>
-                            </BarChart>
-                        </ResponsiveContainer>
-                    </div>
+            <div className={`charts-grid ${loading ? 'opacity-low' : ''}`}>
+                <div className="chart-box main-chart">
+                    <h3>Динамика активности</h3>
+                    <ResponsiveContainer width="100%" height={300}>
+                        <AreaChart data={chartData}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="#222" vertical={false} />
+                            <XAxis dataKey="date" stroke="#555" fontSize={10} />
+                            <YAxis stroke="#555" fontSize={10} />
+                            <Tooltip contentStyle={{ background: '#111', border: '1px solid #333' }} />
+                            <Area type="monotone" dataKey="count" stroke="#4fc3f7" fill="#4fc3f722" connectNulls />
+                        </AreaChart>
+                    </ResponsiveContainer>
                 </div>
-            )}
+
+                <div className="chart-box">
+                    <h3>Доля в сканах</h3>
+                    <ResponsiveContainer width="100%" height={300}>
+                        <PieChart>
+                            <Pie
+                                data={data?.by_user || []}
+                                dataKey="count"
+                                nameKey="login"
+                                cx="50%" cy="50%"
+                                innerRadius={60} outerRadius={80}
+                                paddingAngle={5}
+                            >
+                                {(data?.by_user || []).map((_: any, i: number) => (
+                                    <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                                ))}
+                            </Pie>
+                            <Tooltip />
+                            <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
+                        </PieChart>
+                    </ResponsiveContainer>
+                </div>
+
+                <div className="chart-box full-width">
+                    <h3>Нагрузка на платформы</h3>
+                    <ResponsiveContainer width="100%" height={250}>
+                        <BarChart data={data?.by_platform || []}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="#222" vertical={false} />
+                            <XAxis dataKey="platform" tickFormatter={(v) => `Пл. ${v}`} stroke="#555" fontSize={10} />
+                            <YAxis stroke="#555" fontSize={10} />
+                            <Tooltip cursor={{fill: 'rgba(255,255,255,0.05)'}} />
+                            <Bar dataKey="count" radius={[4, 4, 0, 0]} maxBarSize={40}>
+                                {(data?.by_platform || []).map((_: any, i: number) => (
+                                    <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                                ))}
+                            </Bar>
+                        </BarChart>
+                    </ResponsiveContainer>
+                </div>
+            </div>
         </div>
     );
 };

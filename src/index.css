@@ -14,6 +14,11 @@
     --accent-overwrite: #ff9800;        /* Оранжевый Tesla-style для дублей */
     --accent-moving: #ff3b3b;
     --accent-blue: #00f2ff;
+
+}
+html {
+    /* Разрешаем скролл только если экран меньше 320px */
+    overflow-x: auto;
 }
 
 * { box-sizing: border-box; }
@@ -48,5 +53,16 @@ body {
 
 /* 📱 ГЛОБАЛЬНАЯ АДАПТИВНОСТЬ (Размеры шрифтов) */
 @media (max-width: 768px) {
-    :root { font-size: 15px; }
+    :root { font-size: 14px; } /* Уменьшаем базу для мобильных */
+}
+img, video, canvas, svg {
+    max-width: 100%;
+    height: auto;
+}
+
+/* Карточки теперь всегда вписываются в ширину */
+.app .card {
+    width: 100%;
+    margin-bottom: 1rem;
+    word-wrap: break-word; /* Чтобы длинные ID/тексты не рвали верстку */
 }

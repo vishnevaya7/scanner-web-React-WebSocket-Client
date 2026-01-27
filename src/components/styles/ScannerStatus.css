@@ -2,26 +2,74 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    margin-left: 12px;
+    padding: 6px 12px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    transition: all 0.2s ease;
+}
+
+/* Статусная точка */
+.status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.status-dot.connected {
+    background-color: var(--accent-connected);
+    box-shadow: 0 0 8px var(--accent-connected);
+}
+
+.status-dot.refused {
+    background-color: var(--accent-danger);
+    box-shadow: 0 0 8px rgba(255, 59, 59, 0.4);
 }
 
 .scanner-status-text {
-    font-size: 14px;
+    font-size: 13px;
+    font-weight: 500;
     white-space: nowrap;
     color: var(--text-primary);
-}
-
-.scanner-status-text.refused {
-    color: var(--accent-danger);
 }
 
 .scanner-status-text.connected {
     color: var(--accent-connected);
 }
 
+.scanner-status-text.refused {
+    color: var(--accent-danger);
+}
+
 .reconnect-btn {
-    padding: 4px 8px !important;
-    font-size: 12px !important;
-    height: auto !important;
-    min-height: unset !important;
+    background: transparent;
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-size: 11px;
+    cursor: pointer;
+    text-transform: uppercase;
+    margin-left: 4px;
+}
+
+/* АДАПТИВНОСТЬ: меньше 460px — только точка */
+@media (max-width: 460px) {
+    .scanner-status-container {
+        padding: 8px; /* Делаем контейнер квадратным под точку */
+        gap: 0;
+        background: transparent; /* Убираем фон, чтобы не громоздить хедер */
+        border-color: transparent;
+    }
+
+    .scanner-status-text,
+    .reconnect-btn {
+        display: none !important; /* Скрываем текст и кнопку переподключения */
+    }
+
+    .status-dot {
+        width: 10px; /* Немного увеличим точку для кликабельности/видимости */
+        height: 10px;
+    }
 }

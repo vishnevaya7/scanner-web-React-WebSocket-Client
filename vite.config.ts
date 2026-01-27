@@ -18,17 +18,17 @@ export default defineConfig({
         host: true,
         proxy: {
             '/auth': {
-                target: 'http://192.168.0.101:8000',
+                target: 'http://192.168.0.102:8000',
                 changeOrigin: true,
                 secure: false,
             },
             '/ws': {
-                target: 'http://192.168.0.101:8000',
+                target: 'http://192.168.0.102:8000',
                 ws: true,
                 changeOrigin: true,
             },
             '/api': {
-                target: 'http://192.168.0.101:8000',
+                target: 'http://192.168.0.102:8000',
                 changeOrigin: true,
                 secure: false,
             },

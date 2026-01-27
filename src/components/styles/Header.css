@@ -1,21 +1,78 @@
-.header {
-    background: var(--bg-secondary);
-    padding: 1rem;
-    border-bottom: 1px solid var(--border);
+.main-app-header {
+    height: 64px;
     display: flex;
-    justify-content: space-between;
     align-items: center;
+    justify-content: space-between;
+    padding: 0 1.5rem;
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border);
     position: sticky;
     top: 0;
-    z-index: 10;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.4);
-    width: 100%;
-    flex-shrink: 0;
+    z-index: 1000;
 }
 
 .header-title {
-    font-size: 1.25rem;
-    font-weight: 700;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
     color: var(--text-primary);
     margin: 0;
+    flex: 1;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    flex-shrink: 0;
+}
+
+/* Кнопка выхода с повышенной специфичностью, чтобы не использовать !important */
+.main-app-header .header-logout-btn {
+    background: transparent;
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+    padding: 6px 14px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    width: auto; /* Перебиваем глобальный width: 100% */
+}
+
+.main-app-header .header-logout-btn:hover {
+    color: var(--text-primary);
+    border-color: var(--text-muted);
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.sidebar-toggle-btn {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    width: 24px;
+    height: 24px;
+    margin-right: 12px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 5px;
+}
+
+.sidebar-toggle-btn::before,
+.sidebar-toggle-btn::after {
+    content: '';
+    width: 20px;
+    height: 2px;
+    background: var(--text-primary);
+}
+
+@media (max-width: 768px) {
+    .main-app-header { padding: 0 1rem; height: 56px; }
+    .header-actions { gap: 0.75rem; }
 }

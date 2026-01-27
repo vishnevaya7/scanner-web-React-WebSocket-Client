@@ -19,8 +19,8 @@ export interface WSChangePlatformData {
     pairs: PlatformMap;
 }
 export type WSMessage =
-    | { type?: 'new_pair'; data: WSNewPairData }
-    | { type?: 'change_platform'; data: WSChangePlatformData }
+    | { event?: 'new_pair'; data: WSNewPairData }
+    | { event?: 'change_platform'; data: WSChangePlatformData }
     | { [key: string]: any };
 export interface ScannerInfoResponse {
     scanners: any[];
@@ -35,7 +35,7 @@ export interface HistoryItem {
     timestamp: string;
     legacy_synced: number;     // 1=успех, 0=в процессе, -1=ошибка
     legacy_integration_error?: string | null;
-    is_overwrite?: boolean;
+    is_overwritten?: boolean;
 }
 
 export interface HistoryResponse {

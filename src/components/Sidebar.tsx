@@ -9,12 +9,15 @@ type Props = {
 export default function Sidebar({ isOpen, onClose }: Props) {
     return (
         <aside className={`sidebar ${isOpen ? 'open' : 'closed'}`}>
-            <div className="sidebar-title">ИнфоСкан</div>
+            <div className="sidebar-header">
+                <div className="sidebar-title">ИнфоСкан</div>
+                <button className="mobile-close-btn" onClick={onClose}>✕</button>
+            </div>
+
             <nav className="sidebar-nav">
                 <NavLink to="/dashboard" end className={({ isActive }) => `side-link ${isActive ? 'active' : ''}`} onClick={onClose}>
                     <span className="side-text">Мониторинг</span>
                 </NavLink>
-                {/* НОВАЯ ССЫЛКА */}
                 <NavLink to="/dashboard/analytics" className={({ isActive }) => `side-link ${isActive ? 'active' : ''}`} onClick={onClose}>
                     <span className="side-text">Аналитика</span>
                 </NavLink>
