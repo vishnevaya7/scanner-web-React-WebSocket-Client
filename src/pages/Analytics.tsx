@@ -1,4 +1,6 @@
-import React, { useEffect, useState, useMemo, useRef, useCallback } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
 import { api } from '../services/api';
 import {
     AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -11,115 +13,81 @@ const COLORS = ['#4fc3f7', '#9575cd', '#ffb74d', '#81c784', '#e57373'];
 const Analytics: React.FC = () => {
     const [data, setData] = useState<any>(null);
     const [loading, setLoading] = useState(false);
-    const [options, setOptions] = useState({ platforms: [] as any[], users: [] as string[] });
 
     const [filters, setFilters] = useState({
-        date_from: '',
-        date_to: '',
+        startDate: null as Date | null,
+        endDate: null as Date | null,
         platform: '',
         login: ''
     });
 
-    // Рефы для открытия календаря при клике
-    const dateFromRef = useRef<HTMLInputElement>(null);
-    const dateToRef = useRef<HTMLInputElement>(null);
-
-    // 1. Функция загрузки данных (мемоизирована, чтобы не создавать циклов)
-    const loadAnalytics = useCallback(async (f: typeof filters) => {
+    // 1. Загрузка данных (отправляем фильтры — получаем готовые массивы)
+    const loadData = useCallback(async () => {
         setLoading(true);
         try {
-            const params: any = {
-                date_from: f.date_from || undefined,
-                date_to: f.date_to || undefined,
-                platform: f.platform ? Number(f.platform) : undefined,
-                login: f.login || undefined
+            const params = {
+                date_from: filters.startDate?.toISOString().split('T')[0],
+                date_to: filters.endDate?.toISOString().split('T')[0],
+                platform: filters.platform ? Number(filters.platform) : undefined,
+                login: filters.login || undefined
             };
-
             const res = await api.getGraphics(params);
             setData(res);
-
-            // Инициализация списков фильтров только один раз при первом успехе
-            if (options.users.length === 0 && res.by_user) {
-                setOptions({
-                    platforms: res.by_platform?.map((p: any) => p.platform).sort((a: any, b: any) => a - b) || [],
-                    users: res.by_user?.map((u: any) => u.login).sort() || []
-                });
-            }
-        } catch (error) {
-            console.error("Analytics Load Error:", error);
+        } catch (e) {
+            console.error('Ошибка загрузки:', e);
         } finally {
             setLoading(false);
         }
-    }, [options.users.length]);
+    }, [filters]);
 
-    // Первая загрузка при монтировании
     useEffect(() => {
-        loadAnalytics(filters);
-    }, [loadAnalytics]);
+        loadData();
+    }, [loadData]);
 
-    // Обработчик изменений фильтров
-    const handleFilterChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    // 2. Формируем списки для фильтров ПРЯМО из текущего ответа API
+    const userOptions = useMemo(() =>
+            data?.by_user?.map((u: any) => u.login).sort() || [],
+        [data]);
+
+    const platformOptions = useMemo(() =>
+            data?.by_platform?.map((p: any) => p.platform).sort((a: any, b: any) => a - b) || [],
+        [data]);
+
+    const handleFilterChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
         const { name, value } = e.target;
-        const nextFilters = { ...filters, [name]: value };
-        setFilters(nextFilters);
-        loadAnalytics(nextFilters);
-    };
-
-    // Сброс фильтров
-    const resetFilters = () => {
-        const cleared = { date_from: '', date_to: '', platform: '', login: '' };
-        setFilters(cleared);
-        loadAnalytics(cleared);
-    };
-
-    // 2. Использование useMemo для подготовки данных графика (сортировка)
-    const chartData = useMemo(() => {
-        if (!data?.by_date) return [];
-        return [...data.by_date].sort((a, b) =>
-            new Date(a.date).getTime() - new Date(b.date).getTime()
-        );
-    }, [data]);
-
-    // Программное открытие нативного календаря
-    const triggerPicker = (ref: React.RefObject<HTMLInputElement>) => {
-        if (ref.current && 'showPicker' in ref.current) {
-            ref.current.showPicker();
-        }
+        setFilters(prev => ({ ...prev, [name]: value }));
     };
 
     return (
         <div className="analytics-container">
             <div className="analytics-header">
-                <h1 className="history-title">Аналитика системы</h1>
+                <div className="title-section">
+                    <h1 className="history-title">Аналитика системы</h1>
+                    {loading && <div className="loading-badge">Загрузка...</div>}
+                </div>
 
                 <div className="filter-panel">
                     <div className="filter-group">
                         <label>Период</label>
-                        <div className="date-range-combined" onClick={() => triggerPicker(dateFromRef)}>
-                            <input
-                                type="date"
-                                name="date_from"
-                                ref={dateFromRef}
-                                value={filters.date_from}
-                                onChange={handleFilterChange}
-                            />
-                            <span className="date-separator">→</span>
-                            <input
-                                type="date"
-                                name="date_to"
-                                ref={dateToRef}
-                                value={filters.date_to}
-                                onChange={handleFilterChange}
-                                onClick={(e) => { e.stopPropagation(); triggerPicker(dateToRef); }}
-                            />
-                        </div>
+                        <DatePicker
+                            selectsRange
+                            startDate={filters.startDate}
+                            endDate={filters.endDate}
+                            onChange={(update: [Date | null, Date | null]) => {
+                                setFilters(prev => ({ ...prev, startDate: update[0], endDate: update[1] }));
+                            }}
+                            isClearable
+                            placeholderText="За всё время"
+                            className="custom-date-input"
+                            dateFormat="dd.MM.yyyy"
+                        />
                     </div>
 
                     <div className="filter-group">
                         <label>Сотрудник</label>
                         <select name="login" value={filters.login} onChange={handleFilterChange}>
                             <option value="">Все сотрудники</option>
-                            {options.users.map(u => <option key={u} value={u}>{u}</option>)}
+                            {userOptions.map((u: string) => <option key={u} value={u}>{u}</option>)}
                         </select>
                     </div>
 
@@ -127,14 +95,15 @@ const Analytics: React.FC = () => {
                         <label>Платформа</label>
                         <select name="platform" value={filters.platform} onChange={handleFilterChange}>
                             <option value="">Все платформы</option>
-                            {options.platforms.map(p => <option key={p} value={String(p)}>Платформа {p}</option>)}
+                            {platformOptions.map((p: number) => <option key={p} value={String(p)}>Платформа {p}</option>)}
                         </select>
                     </div>
 
-                    <button className="reset-filter-btn" onClick={resetFilters}>✕</button>
+                    <button className="reset-filter-btn" onClick={() => setFilters({startDate: null, endDate: null, platform: '', login: ''})}>✕</button>
                 </div>
             </div>
 
+            {/* Блок Summary: 145, 109, 0 и т.д. */}
             <div className="stats-cards">
                 <div className="stat-card">
                     <span className="stat-label">Всего сканирований</span>
@@ -150,22 +119,24 @@ const Analytics: React.FC = () => {
                 </div>
             </div>
 
-            <div className={`charts-grid ${loading ? 'opacity-low' : ''}`}>
+            <div className={`charts-grid ${loading ? 'grid-loading' : ''}`}>
+                {/* Динамика по дням (by_date) */}
                 <div className="chart-box main-chart">
-                    <h3>Динамика активности</h3>
+                    <h3>Активность по дням</h3>
                     <ResponsiveContainer width="100%" height={300}>
-                        <AreaChart data={chartData}>
+                        <AreaChart data={data?.by_date || []}>
                             <CartesianGrid strokeDasharray="3 3" stroke="#222" vertical={false} />
                             <XAxis dataKey="date" stroke="#555" fontSize={10} />
                             <YAxis stroke="#555" fontSize={10} />
                             <Tooltip contentStyle={{ background: '#111', border: '1px solid #333' }} />
-                            <Area type="monotone" dataKey="count" stroke="#4fc3f7" fill="#4fc3f722" connectNulls />
+                            <Area type="monotone" dataKey="count" stroke="#4fc3f7" fill="#4fc3f722" />
                         </AreaChart>
                     </ResponsiveContainer>
                 </div>
 
+                {/* Распределение по юзерам (by_user) */}
                 <div className="chart-box">
-                    <h3>Доля в сканах</h3>
+                    <h3>Доля сотрудников</h3>
                     <ResponsiveContainer width="100%" height={300}>
                         <PieChart>
                             <Pie
@@ -176,16 +147,20 @@ const Analytics: React.FC = () => {
                                 innerRadius={60} outerRadius={80}
                                 paddingAngle={5}
                             >
-                                {(data?.by_user || []).map((_: any, i: number) => (
-                                    <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                                {(data?.by_user || []).map((entry: any, i: number) => (
+                                    <Cell
+                                        key={`cell-${i}`}
+                                        fill={entry.login === filters.login ? '#4fc3f7' : COLORS[i % COLORS.length]}
+                                    />
                                 ))}
                             </Pie>
                             <Tooltip />
-                            <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
+                            <Legend />
                         </PieChart>
                     </ResponsiveContainer>
                 </div>
 
+                {/* Платформы (by_platform) */}
                 <div className="chart-box full-width">
                     <h3>Нагрузка на платформы</h3>
                     <ResponsiveContainer width="100%" height={250}>
@@ -194,9 +169,9 @@ const Analytics: React.FC = () => {
                             <XAxis dataKey="platform" tickFormatter={(v) => `Пл. ${v}`} stroke="#555" fontSize={10} />
                             <YAxis stroke="#555" fontSize={10} />
                             <Tooltip cursor={{fill: 'rgba(255,255,255,0.05)'}} />
-                            <Bar dataKey="count" radius={[4, 4, 0, 0]} maxBarSize={40}>
+                            <Bar dataKey="count" radius={[4, 4, 0, 0]}>
                                 {(data?.by_platform || []).map((_: any, i: number) => (
-                                    <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                                    <Cell key={`bar-${i}`} fill={COLORS[i % COLORS.length]} />
                                 ))}
                             </Bar>
                         </BarChart>

@@ -1,48 +1,42 @@
-import  { useEffect, useState, useCallback, useMemo } from 'react';
+import { useEffect, useState, useCallback } from 'react';
+import DatePicker from 'react-datepicker';
+import "react-datepicker/dist/react-datepicker.css";
 import type { HistoryResponse, HistoryItem } from "../types";
 import { api } from "../services/api";
 import './styles/HistoryPage.css';
 
 type SortField = 'id' | 'login' | 'platform' | 'product' | 'scan_date' | 'legacy_synced' | 'is_overwritten';
 
+interface ExtendedHistoryItem extends HistoryItem {
+    scan_date?: string;
+}
+
 interface Filters {
-    date_from: string;
-    date_to: string;
+    startDate: Date | null;
+    endDate: Date | null;
     login: string;
     product: string | number;
     platform: string | number;
     legacy_synced: string | number;
     is_overwritten: string;
-    sort: SortField;
-    order: 'asc' | 'desc';
+    sort: SortField | null; // Разрешаем null для сброса сортировки
+    order: 'asc' | 'desc' | null;
     page: number;
     size: number;
     id: string | number;
 }
 
-// ТОЛЬКО ОДИН ЭКСПОРТ ЗДЕСЬ И НИГДЕ БОЛЬШЕ
 export default function HistoryPage() {
-    const todayStr = useMemo(() => new Date().toISOString().split('T')[0], []);
-
     const [history, setHistory] = useState<HistoryResponse>({
-        items: [], total: 0, page: 1, size: 100, pages: 0
+        items: [], total: 0, page: 1, size: 30, pages: 0
     });
     const [loading, setLoading] = useState(true);
     const [showFilters, setShowFilters] = useState(false);
 
     const [filters, setFilters] = useState<Filters>({
-        page: 1,
-        size: 100,
-        date_from: todayStr,
-        date_to: todayStr,
-        login: '',
-        product: '',
-        platform: '',
-        legacy_synced: '',
-        is_overwritten: '',
-        sort: 'scan_date',
-        order: 'desc',
-        id: ''
+        page: 1, size: 30, startDate: null, endDate: null,
+        login: '', product: '', platform: '', legacy_synced: '',
+        is_overwritten: '', sort: 'scan_date', order: 'desc', id: ''
     });
 
     const loadHistory = useCallback(async (f: Filters) => {
@@ -52,19 +46,33 @@ export default function HistoryPage() {
                 page: f.page,
                 size: f.size,
                 id: f.id !== '' ? String(f.id) : undefined,
-                date_from: f.id ? undefined : f.date_from,
-                date_to: f.id ? undefined : f.date_to,
-                login: f.login || undefined,
+                date_from: f.startDate?.toISOString().split('T')[0],
+                date_to: f.endDate?.toISOString().split('T')[0],
+                login: f.login.trim() || undefined,
                 product: f.product !== '' ? Number(f.product) : undefined,
                 platform: f.platform !== '' ? Number(f.platform) : undefined,
                 legacy_synced: f.legacy_synced === '' ? undefined : Number(f.legacy_synced),
                 is_overwritten: f.is_overwritten === 'true' ? true : f.is_overwritten === 'false' ? false : undefined,
-                sort: f.sort,
-                order: f.order
+                sort: f.sort || undefined,
+                order: f.order || undefined
             });
-            setHistory(data);
+
+            // Клиентская валидация для точного соответствия фильтрам (если API игнорирует параметры при наличии ID)
+            const validatedItems = data.items.filter((item: ExtendedHistoryItem) => {
+                if (f.id && String(item.id) !== String(f.id)) return false;
+                if (f.login && !item.login.toLowerCase().includes(f.login.toLowerCase())) return false;
+                if (f.product && String(item.product) !== String(f.product)) return false;
+                if (f.platform && String(item.platform) !== String(f.platform)) return false;
+                return true;
+            });
+
+            setHistory({
+                ...data,
+                items: validatedItems,
+                total: f.id ? validatedItems.length : data.total
+            });
         } catch (error) {
-            console.error('Ошибка загрузки истории:', error);
+            console.error('Ошибка загрузки:', error);
         } finally {
             setLoading(false);
         }
@@ -74,31 +82,27 @@ export default function HistoryPage() {
         loadHistory(filters);
     }, [filters, loadHistory]);
 
-    // Клиентская фильтрация для связки ID + Платформа
-    const displayedItems = useMemo(() => {
-        return history.items.filter((item: HistoryItem) => {
-            if (filters.platform !== '' && Number(item.platform) !== Number(filters.platform)) return false;
-            if (filters.login !== '' && !item.login.toLowerCase().includes(filters.login.toLowerCase())) return false;
-            return true;
-        });
-    }, [history.items, filters.platform, filters.login]);
-
     const updateFilter = (key: keyof Filters, value: any) => {
-        setFilters(prev => ({ ...prev, [key]: value === null ? '' : value, page: 1 }));
+        setFilters(prev => ({ ...prev, [key]: value, page: 1 }));
     };
 
+    // Логика сортировки: ASC -> DESC -> Сброс (Default)
     const handleSort = (field: SortField) => {
         setFilters(prev => {
-            let nextOrder: 'asc' | 'desc' = 'desc';
-            if (prev.sort === field && prev.order === 'desc') nextOrder = 'asc';
-            return { ...prev, sort: field, order: nextOrder, page: 1 };
-        });
-    };
+            let nextOrder: 'asc' | 'desc' | null = 'asc';
+            let nextField: SortField | null = field;
 
-    const renderSortIcon = (field: SortField) => {
-        const isActive = filters.sort === field;
-        if (!isActive) return <span className="sort-icon inactive">↕</span>;
-        return <span className="sort-icon active">{filters.order === 'desc' ? '↓' : '↑'}</span>;
+            if (prev.sort === field) {
+                if (prev.order === 'asc') nextOrder = 'desc';
+                else if (prev.order === 'desc') {
+                    // Третий клик: сброс к значениям по умолчанию
+                    nextOrder = 'desc';
+                    nextField = 'scan_date';
+                }
+            }
+
+            return { ...prev, sort: nextField, order: nextOrder, page: 1 };
+        });
     };
 
     const getStatusBadge = (status: any) => {
@@ -112,35 +116,80 @@ export default function HistoryPage() {
     return (
         <div className="history-container">
             <div className="history-header">
-                <h1 className="history-title">История сканирований</h1>
-                <div className="history-stats">Найдено: <strong>{history.total}</strong></div>
-            </div>
-
-            <div className="history-controls">
-                <button className={`history-btn ${showFilters ? 'active' : ''}`} onClick={() => setShowFilters(!showFilters)}>
-                    {showFilters ? '✕ Скрыть' : '🔧 Фильтры'}
-                </button>
-                <div className="date-range-combined">
-                    <input type="date" value={filters.date_from} onChange={e => updateFilter('date_from', e.target.value)} />
-                    <span className="date-separator">→</span>
-                    <input type="date" value={filters.date_to} onChange={e => updateFilter('date_to', e.target.value)} />
+                <div className="title-block">
+                    <h1 className="history-title">История сканирований</h1>
+                    <span className="total-count">Найдено: {history.total}</span>
                 </div>
-                {history.pages > 1 && (
-                    <div className="pagination-mini">
-                        <button disabled={filters.page === 1} onClick={() => updateFilter('page', filters.page - 1)}>←</button>
-                        <span>{filters.page} / {history.pages}</span>
-                        <button disabled={filters.page === history.pages} onClick={() => updateFilter('page', filters.page + 1)}>→</button>
+
+                <div className="history-controls">
+                    <button
+                        className={`history-btn ${showFilters ? 'active' : ''}`}
+                        onClick={() => setShowFilters(!showFilters)}
+                    >
+                        {showFilters ? '✕ Скрыть' : '🔧 Фильтры'}
+                    </button>
+
+                    <div className="date-picker-wrapper">
+                        <DatePicker
+                            selectsRange
+                            startDate={filters.startDate}
+                            endDate={filters.endDate}
+                            onChange={(update: [Date | null, Date | null]) => {
+                                setFilters(prev => ({ ...prev, startDate: update[0], endDate: update[1], page: 1 }));
+                            }}
+                            placeholderText="За всё время"
+                            className="history-date-input"
+                            dateFormat="dd.MM.yyyy"
+                        />
                     </div>
-                )}
+
+                    {history.pages > 1 && (
+                        <div className="pagination-mini">
+                            <span className="pagination-range">
+                                {((filters.page - 1) * filters.size) + 1}–{Math.min(filters.page * filters.size, history.total)}
+                            </span>
+                            <div className="pagination-nav">
+                                {/* Исправленная пагинация: используем updateFilter для корректного сброса */}
+                                <button
+                                    disabled={filters.page <= 1}
+                                    onClick={() => setFilters(p => ({...p, page: p.page - 1}))}
+                                >←</button>
+                                <span className="page-info">{filters.page} / {history.pages}</span>
+                                <button
+                                    disabled={filters.page >= history.pages}
+                                    onClick={() => setFilters(p => ({...p, page: p.page + 1}))}
+                                >→</button>
+                            </div>
+                        </div>
+                    )}
+                </div>
             </div>
 
             {showFilters && (
                 <div className="filters-panel animated-fade-in">
                     <div className="filters-grid">
-                        <div className="filter-group"><label>ID записи</label><input type="text" className="history-input" value={filters.id} onChange={e => updateFilter('id', e.target.value)} /></div>
-                        <div className="filter-group"><label>Пользователь</label><input type="text" className="history-input" value={filters.login} onChange={e => updateFilter('login', e.target.value)} /></div>
-                        <div className="filter-group"><label>ID Продукта</label><input type="text" className="history-input" value={filters.product} onChange={e => updateFilter('product', e.target.value)} /></div>
-                        <div className="filter-group"><label>ID Платформы</label><input type="text" className="history-input" value={filters.platform} onChange={e => updateFilter('platform', e.target.value)} /></div>
+                        <div className="filter-group">
+                            <label>ID записи</label>
+                            <input
+                                type="text"
+                                className="history-input"
+                                value={filters.id}
+                                onChange={e => updateFilter('id', e.target.value.replace(/\D/g, ''))}
+                                placeholder="Точный ID..."
+                            />
+                        </div>
+                        <div className="filter-group">
+                            <label>Пользователь</label>
+                            <input type="text" className="history-input" value={filters.login} onChange={e => updateFilter('login', e.target.value)} />
+                        </div>
+                        <div className="filter-group">
+                            <label>Продукт</label>
+                            <input type="text" className="history-input" value={filters.product} onChange={e => updateFilter('product', e.target.value)} />
+                        </div>
+                        <div className="filter-group">
+                            <label>Платформа</label>
+                            <input type="text" className="history-input" value={filters.platform} onChange={e => updateFilter('platform', e.target.value)} />
+                        </div>
                     </div>
                 </div>
             )}
@@ -149,29 +198,53 @@ export default function HistoryPage() {
                 <table className="history-table">
                     <thead>
                     <tr>
-                        <th onClick={() => handleSort('id')} className="history-th sortable">ID {renderSortIcon('id')}</th>
-                        <th onClick={() => handleSort('login')} className="history-th sortable">Логин {renderSortIcon('login')}</th>
-                        <th onClick={() => handleSort('product')} className="history-th sortable">Продукт {renderSortIcon('product')}</th>
-                        <th onClick={() => handleSort('platform')} className="history-th sortable">Платформа {renderSortIcon('platform')}</th>
-                        <th onClick={() => handleSort('legacy_synced')} className="history-th sortable">Статус {renderSortIcon('legacy_synced')}</th>
-                        <th onClick={() => handleSort('scan_date')} className="history-th sortable">Время {renderSortIcon('scan_date')}</th>
+                        <th onClick={() => handleSort('id')} className="sortable">ID
+                            <span className={`sort-icon ${filters.sort === 'id' ? 'active' : ''}`}>
+                                    {filters.sort === 'id' ? (filters.order === 'asc' ? ' ↑' : ' ↓') : ' ↕'}
+                                </span>
+                        </th>
+                        <th onClick={() => handleSort('login')} className="sortable">Логин
+                            <span className={`sort-icon ${filters.sort === 'login' ? 'active' : ''}`}>
+                                    {filters.sort === 'login' ? (filters.order === 'asc' ? ' ↑' : ' ↓') : ' ↕'}
+                                </span>
+                        </th>
+                        <th onClick={() => handleSort('product')} className="sortable">Продукт
+                            <span className={`sort-icon ${filters.sort === 'product' ? 'active' : ''}`}>
+                                    {filters.sort === 'product' ? (filters.order === 'asc' ? ' ↑' : ' ↓') : ' ↕'}
+                                </span>
+                        </th>
+                        <th onClick={() => handleSort('platform')} className="sortable">Платформа
+                            <span className={`sort-icon ${filters.sort === 'platform' ? 'active' : ''}`}>
+                                    {filters.sort === 'platform' ? (filters.order === 'asc' ? ' ↑' : ' ↓') : ' ↕'}
+                                </span>
+                        </th>
+                        <th onClick={() => handleSort('legacy_synced')} className="sortable">Статус
+                            <span className={`sort-icon ${filters.sort === 'legacy_synced' ? 'active' : ''}`}>
+                                    {filters.sort === 'legacy_synced' ? (filters.order === 'asc' ? ' ↑' : ' ↓') : ' ↕'}
+                                </span>
+                        </th>
+                        <th onClick={() => handleSort('scan_date')} className="sortable">Время
+                            <span className={`sort-icon ${filters.sort === 'scan_date' ? 'active' : ''}`}>
+                                    {filters.sort === 'scan_date' ? (filters.order === 'asc' ? ' ↑' : ' ↓') : ' ↕'}
+                                </span>
+                        </th>
                     </tr>
                     </thead>
-                    <tbody>
+                    <tbody className={loading ? 'table-loading' : ''}>
                     {loading ? (
-                        <tr><td colSpan={6} className="loading-state">Загрузка...</td></tr>
-                    ) : displayedItems.length === 0 ? (
-                        <tr><td colSpan={6} className="empty-state">Нет данных</td></tr>
+                        <tr><td colSpan={6} className="loading-state">Загрузка данных...</td></tr>
+                    ) : history.items.length === 0 ? (
+                        <tr><td colSpan={6} className="empty-state">Записей не найдено</td></tr>
                     ) : (
-                        displayedItems.map((item: HistoryItem) => (
+                        history.items.map((item: ExtendedHistoryItem) => (
                             <tr key={item.id} className={item.is_overwritten ? 'row-overwrite' : ''}>
-                                <td className="history-td font-mono">#{item.id}</td>
-                                <td className="history-td">{item.login}</td>
-                                <td className="history-td font-mono">{item.product}</td>
-                                <td className="history-td"><span className="platform-badge">{item.platform}</span></td>
-                                <td className="history-td">{getStatusBadge(item.legacy_synced)}</td>
-                                <td className="history-td time-cell">
-                                    {(item as any).scan_date ? new Date((item as any).scan_date).toLocaleString('ru-RU') : '—'}
+                                <td className="font-mono">#{item.id}</td>
+                                <td>{item.login}</td>
+                                <td className="font-mono">{item.product}</td>
+                                <td><span className="platform-badge">{item.platform}</span></td>
+                                <td>{getStatusBadge(item.legacy_synced)}</td>
+                                <td className="time-cell">
+                                    {item.scan_date ? new Date(item.scan_date).toLocaleString('ru-RU') : '—'}
                                 </td>
                             </tr>
                         ))
@@ -182,4 +255,3 @@ export default function HistoryPage() {
         </div>
     );
 }
-

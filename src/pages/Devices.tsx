@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { api } from '../services/api';
 import './styles/Devices.css';
+import {useAuth} from "../context/AuthContext.tsx";
 
 interface Scanner {
     login: string;
@@ -15,6 +16,7 @@ export default function Devices() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [items, setItems] = useState<Scanner[]>([]);
+    const { fullName } = useAuth();
 
     const load = useCallback(async () => {
         try {
@@ -50,7 +52,7 @@ export default function Devices() {
                 {items.map((it, idx) => (
                     <div key={it.login + idx} className="device-card card">
                         <div className="card-header">
-                            <div className="card-title">👤 {it.login}</div>
+                            <div className="card-title">👤 {fullName || '...'}</div>
                             <div className="card-badge">Платформа: {it.current_platform}</div>
                         </div>
 

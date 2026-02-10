@@ -5,22 +5,21 @@ import { auth } from '../services/auth';
 import './styles/Header.css';
 
 type Props = {
-    title: string;
+    title?: string; // Сделали опциональным, так как теперь выводим имя
     onToggleSidebar?: () => void;
     rightContent?: React.ReactNode;
-    onLogout?: () => void; // Добавляем опциональный проп для доп. действий (например, disconnect сокета)
+    onLogout?: () => void;
 };
 
-export default function Header({ title, onToggleSidebar, rightContent, onLogout }: Props) {
+export default function Header({ onToggleSidebar, rightContent, onLogout }: Props) {
     const navigate = useNavigate();
-    const { setIsAuthenticated } = useAuth();
+    // Берем только fullName из контекста
+    const { setIsAuthenticated, fullName } = useAuth();
 
     const handleLogout = () => {
-        // Если передана внешняя функция выхода (с очисткой сокетов), вызываем её
         if (onLogout) {
             onLogout();
         } else {
-            // Иначе просто дефолтный выход
             auth.clear();
             setIsAuthenticated(false);
             navigate('/login', { replace: true });
@@ -37,7 +36,10 @@ export default function Header({ title, onToggleSidebar, rightContent, onLogout 
                 <span className="burger-icon" />
             </button>
 
-            <h1 className="header-title">{title}</h1>
+            {/* Теперь вместо title здесь всегда имя пользователя из WS */}
+            <h1 className="header-title">
+                Пользователь: {fullName || '...'}
+            </h1>
 
             <div className="header-actions">
                 {rightContent}

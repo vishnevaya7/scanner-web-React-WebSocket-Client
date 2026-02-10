@@ -5,25 +5,38 @@ interface AuthContextType {
     isAuthenticated: boolean;
     setIsAuthenticated: (value: boolean) => void;
     login: string | null;
-    isLoading: boolean; // Добавлено состояние загрузки
+    fullName: string | null;
+    setFullName: (name: string | null) => void; // <-- 1. ДОБАВЬТЕ ЭТУ СТРОКУ
+    isLoading: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
     const [isAuthenticated, setIsAuthenticated] = useState(false);
-    const [isLoading, setIsLoading] = useState(true); // Изначально true
+    const [isLoading, setIsLoading] = useState(true);
+    // 2. Создаем состояние для реактивности
+    const [fullName, setFullNameState] = useState<string | null>(auth.getFullname());
+
+    // 3. Функция, которая обновляет и стейт (для UI), и localStorage (для памяти)
+    const setFullName = (name: string | null) => {
+        if (name) {
+            auth.setFullname(name); // Сохраняем в localStorage для будущих сессий
+        } else {
+            localStorage.removeItem('user_fullName');
+        }
+        setFullNameState(name); // Обновляем стейт для текущего экрана
+    };
 
     useEffect(() => {
         const token = auth.getToken();
         const login = auth.getLogin();
 
         if (token && login) {
-            console.log('✅ AuthContext: Auto-auth success:', login);
             setIsAuthenticated(true);
+            // Синхронизируем начальное состояние из localStorage
+            setFullNameState(auth.getFullname());
         }
-
-        // Завершаем загрузку после проверки токена
         setIsLoading(false);
     }, []);
 
@@ -32,7 +45,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             isAuthenticated,
             setIsAuthenticated,
             login: auth.getLogin(),
-            isLoading // Передаем в контекст
+            fullName,    // значение
+            setFullName, // функция обновления (теперь TS не будет ругаться)
+            isLoading
         }}>
             {children}
         </AuthContext.Provider>
